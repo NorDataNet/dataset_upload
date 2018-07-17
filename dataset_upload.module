@@ -1,0 +1,238 @@
+<?php
+function dataset_upload_menu() {
+  $items['dataset_upload/form'] = array(
+    'title' => t('Dataset upload form'),
+    'page callback' => 'dataset_upload_form',
+    'access arguments' => array('access content'),
+    'access callback' => TRUE,
+    'description' => t('Dataset uplaod and validation form'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+//only logged user can submit the dataset
+function ask_for_login($calling_uri) {
+  global $user; 
+  if (!($user->uid)) {
+    $dest = drupal_get_destination();
+    drupal_set_message(t('You need to login or register to validate and upload your dataset'), 'error');
+    drupal_goto('user/login', array('query' => $calling_uri));
+  }
+}
+
+function dataset_upload_form() {
+  ask_for_login(drupal_get_destination()); 
+  return drupal_get_form('dataset_upload_multipage_form');
+}
+
+function dataset_upload_multipage_form($form, $form_state) {
+  // Display page 2 if $form_state['storage']['page_two'] is set
+  if (isset($form_state['storage']['page_two'])) {
+    return dataset_upload_multipage_form_page_two($form, $form_state);
+  }
+
+  $form = array();
+  $form['creation'] = array(
+    '#type' => 'fieldset',
+    //'#title' => t('File validation'),
+    '#description' => t('Before you upload your dataset make sure you have validated it against the IOOS compliance checker. This service is provided by this portal. 
+                         Your dataset will be checked against CF-1.6 and ACDD-1.3 standards. <br> If your dataset is not compliant it will not be accepted for upload 
+                         and your submission will fail.'),
+  );
+
+  $form['creation']['file'] = array(
+    '#type' => 'managed_file',
+    '#title' => t('Upload Your File'),
+    //'#required' => TRUE,
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('nc'),
+      // IMPORTANT for allowing file upload: 
+      // this works only when changing the /etc/php5/apache2/php.ini post_max_size and filesize in apache
+      'file_validate_size' => array(200 * 1024 * 1024),
+    ),
+    '#upload_location' => 'public://dataset_upload_folder/',
+  );
+  //$form += dataset_upload_add_submit_buttons($form_state);
+  $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => 'Next >>',
+  );
+  $form['#validate'][] = 'dataset_upload_multipage_p1_validate';
+  return $form;
+}
+
+function dataset_upload_multipage_p1_validate($form, &$form_state) {
+ //only validates page1
+ //if (isset($form_state['storage']['page_two'])) {
+ //   return;
+ // }
+  $fname = $form['creation']['file'];
+  $fid = $fname["#file"]->fid;
+  $uri = $fname["#file"]->uri;  //public://dataset_upload_folder/t.nc   
+  $path = explode("://", $uri)[1];  //dataset_upload_folder/t.nc
+  $name = explode("dataset_upload_folder/", $uri)[1]; //t.nc
+  $fdir = drupal_realpath('public://'); // /var/www/multisite/sites/mysite/files
+
+  //pass filename
+  $form_state['dataset_fid'] = $fname["#file"]->fid;
+  $form_state['dataset_fname'] = $fname["#file"]->filename;
+
+
+  //define cf output
+  $ex_out_cf = $fdir.'/dataset_upload_folder/'.$name.'_cf.html';
+  //define acdd output
+  $ex_out_acdd = $fdir.'/dataset_upload_folder/'.$name.'_acdd.html';
+  //define nc_to_mmd output
+  $ex_out_nctommd = $fdir.'/dataset_upload_folder/'.$name.'.xml';
+
+  //Run the compliant checker
+  exec('compliance-checker -v --format=html --output='.$ex_out_cf.' --test=cf:1.6 '.$fdir.'/'.$path, $out, $status1);
+  exec('compliance-checker -v --format=html --output='.$ex_out_acdd.' --test=acdd '.$fdir.'/'.$path, $out, $status2);
+  //$status = $status1 + $status2; 
+  //$ex_out = file_get_contents($ex_out_cf).file_get_contents($ex_out_acdd);
+  $status = $status1; 
+  $ex_out = file_get_contents($ex_out_cf);
+
+  //decide what to do according to the compliance checker exit status.
+  if($status !==0){
+     //if the cf-checker fails then give message and remove submission file also from DB. 
+     form_set_error('file','Your dataset is not following the netCDF/CF-1.6 and ACDD-1.3 standards. Your submission can not proceed. <br> 
+     Check your dataset and correct the errors before making a new submission.');
+     //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there. 
+     $file_notsaved = file_load($fid);
+     file_delete($file_notsaved);
+  }else{
+     drupal_set_message(t("Your dataset is compliant with CF and ACDD standards. The submission can now proceed."), 'status');
+     exec('/usr/local/bin/nc_to_mmd.pl --output='.$ex_out_nctommd.' '.$fdir.'/'.$path, $out_nctommd, $status_nctommd);
+     //get xml file content
+     $xml_content = file_get_contents($ex_out_nctommd); // this is a string from gettype 
+     //get xml object iterator 
+     $xml = new SimpleXmlIterator($xml_content);
+     //get xml object iterator with mmd namespaces
+     $xml_wns = $xml->children($xml->getNamespaces(true)['mmd']);
+
+     // extract mmd to the last child
+     function depth_mmd($prefix, $iterator) {
+        $kv_a = array();
+        foreach ($iterator as $k => $v) {
+           if ($iterator->hasChildren()) {
+              $kv_a = array_merge($kv_a, depth_mmd($prefix . ' ' . $k, $v));
+           } else {
+              //add mmd keys and values to form_state to be passed to the second page. 
+              $kv_a[] = array($prefix . ' ' . $k, (string)$v);
+           }
+        }
+        return $kv_a; //this function returms an array of arrys
+     }
+
+     $form_state['metadata'] = depth_mmd("", $xml_wns);
+
+  }
+
+  //remove validation files
+  if(file_exists($ex_out_cf)){
+     file_unmanaged_delete($ex_out_cf);
+  }
+  if(file_exists($ex_out_acdd)){
+     file_unmanaged_delete($ex_out_acdd);
+  }
+
+  return $form;
+}
+
+// New function created to help make the code more manageable
+function dataset_upload_multipage_form_page_two($form, &$form_state) {
+
+  $form['dsfid'] = array(
+    '#type' => 'hidden',
+    '#value' => $form_state['dataset_fid'],
+  );
+
+  $form['dsfid'] = array(
+    '#type' => 'fieldset',
+    '#description' => 'Your dataset: "' . $form_state['dataset_fname'] . '" has the metadata as reported in the following tabel. Please make sure they are correct before
+                     confirming your submission. If the metadata are not correct, cancel your submission, correct your information and proceed with a new submission.',
+  );
+
+
+  $header = array('Metadata Key', 'Metadata value');
+  $rows = $form_state['metadata'];
+
+  $form['table'] = array(
+    '#markup' => theme('table', array('header'=>$header, 'rows'=>$rows)),
+  );
+
+
+  $form['review'] = array(
+    '#type' => 'submit',
+    '#value' => 'Confirm',
+  );
+  $form['clear'] = array(
+    '#type' => 'submit',
+    '#value' => 'Cancel Submission',
+    '#validate' => array('dataset_upload_multipage_form_clear'),
+  );
+
+
+  return $form;
+}
+
+function dataset_upload_multipage_form_clear($form, $form_state) {
+  drupal_set_message(t('Your dataset upload has been cancelled'),'warning');
+  $form_state['storage']['page_one_values'] = $form_state['values'];
+
+// need to delete records from folder and DB
+  $file_notsaved = file_load($form_state['dataset_fid']);
+  file_delete($file_notsaved);
+
+  unset ($form_state['values']);  
+  unset ($form_state['storage']); 
+  $form_state['rebuild'] = TRUE;
+  $form_state['redirect'] = ''; // Redirects the user.
+}
+
+function dataset_upload_multipage_form_submit($form, &$form_state) {
+  // Handle page 1 submissions
+  if ($form_state['clicked_button']['#id'] == 'edit-next') {
+    $form_state['storage']['page_two'] = TRUE; // We set this to determine
+                                               // which elements to display
+                                               // when the page reloads.
+    // Values below in the $form_state['storage'] array are saved
+    // to carry forward to subsequent pages in the form.
+    $form_state['storage']['page_one_values'] = $form_state['values'];
+    $form_state["rebuild"] = TRUE;   // Added
+  }elseif ($form_state['clicked_button']['#id'] == 'edit-clear'){
+    unset ($form_state['storage']); 
+  }else {
+    drupal_set_message(t('Your dataset and related info have been submitted.'),'status');
+    $form_state['redirect'] = ''; // Redirects the user.
+    unset ($form_state['storage']); 
+  }
+}
+
+function dataset_upload_add_submit_buttons($form_state) {
+  $buttons = array();
+  // Display 'Prev' button on all steps excluding first.
+  if ($form_state['storage']['step'] > 1) {
+    $buttons['prev'] = array(
+      '#type' => 'submit',
+      '#value' => 'Prev',
+    );
+  }
+  // Display 'Next' button on all steps excluding last.
+  if ($form_state['storage']['step'] < 3) {
+    $buttons['next'] = array(
+      '#type' => 'submit',
+      '#value' => 'Next',
+    );
+  }
+  // Display 'Finish' button on the last step.
+  if ($form_state['storage']['step'] == 3) {
+    $buttons['finish'] = array(
+      '#type' => 'submit',
+      '#value' => 'Confirm',
+    );
+  }
+  return $buttons;
+}
