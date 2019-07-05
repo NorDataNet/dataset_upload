@@ -1,5 +1,17 @@
 <?php
+
+function dataset_upload_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#dataset_upload":
+      return t("Module for uploading and validating datasets in netCDF format."); 
+      break; 
+  }
+}
+
 function dataset_upload_menu() {
+  $items = array();
+
+  // create dataset upload page
   $items['dataset_upload/form'] = array(
     'title' => t('Dataset upload form'),
     'page callback' => 'dataset_upload_form',
@@ -8,10 +20,20 @@ function dataset_upload_menu() {
     'description' => t('Dataset uplaod and validation form'),
     'type' => MENU_CALLBACK,
   );
+  // create dataset upload administrative page
+  $items['admin/config/services/dataset_upload'] = array(
+    'title' => 'Dataset Upload',
+    'description' => 'Configuration for Dataset Upload module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dataset_upload_admin'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'dataset_upload.admin.inc',
+  );
+
   return $items;
 }
 
-//only logged user can submit the dataset
+// only logged user can submit the dataset
 function ask_for_login($calling_uri) {
   global $user; 
   if (!($user->uid)) {
@@ -27,115 +49,228 @@ function dataset_upload_form() {
 }
 
 function dataset_upload_multipage_form($form, $form_state) {
+  global $user; 
+  $folder = variable_get('dataset_upload_folder');
+
+  // a directory will be created using the unique user id (uid)
+  $uuid = $user->uid;
+
   // Display page 2 if $form_state['storage']['page_two'] is set
-  if (isset($form_state['storage']['page_two'])) {
+  if ($form_state['storage']['page_two']) {
     return dataset_upload_multipage_form_page_two($form, $form_state);
+  }
+  // Display page 3 if $form_state['storage']['page_three'] is set
+  if ($form_state['storage']['page_three']) {
+    return dataset_upload_multipage_form_page_three($form, $form_state);
   }
 
   $form = array();
+
   $form['creation'] = array(
     '#type' => 'fieldset',
-    //'#title' => t('File validation'),
     '#description' => t('Before you upload your dataset make sure you have validated it against the IOOS compliance checker. This service is provided by this portal. 
                          Your dataset will be checked against CF-1.6 and ACDD-1.3 standards. <br> If your dataset is not compliant it will not be accepted for upload 
                          and your submission will fail.'),
   );
 
-  $form['creation']['file'] = array(
-    '#type' => 'managed_file',
-    '#title' => t('Upload Your File'),
-    //'#required' => TRUE,
-    '#upload_validators' => array(
-      'file_validate_extensions' => array('nc'),
-      // IMPORTANT for allowing file upload: 
-      // this works only when changing the /etc/php5/apache2/php.ini post_max_size and filesize in apache
-      'file_validate_size' => array(200 * 1024 * 1024),
-    ),
-    '#upload_location' => 'public://dataset_upload_folder/',
+  // users can choose to upload a single netcdf file or a compressed file containing netcdf. 
+  $form['creation']['upload_type'] = array(
+    '#title' => t('Select the type of data upload you want to perform'),
+    '#type' => 'radios',
+    '#required' => TRUE,
+    '#options' => array('single_file' => t('A single netCDF/CF file'),
+                        'tgz_file' => t('A tgz file containing several netCDF/CF files'), 
+                        'mult_netcdf' => t('Multiple netCDF')),
   );
-  //$form += dataset_upload_add_submit_buttons($form_state);
-  $form['next'] = array(
+
+  // here we just upload a nc that will have to be uncompressed and validated. 
+  $form['creation']['single_file'] = array(
+    '#type' => 'managed_file',
+    '#title' => t('Upload Your File with a .nc extension'),
+    '#states'=> array('visible' => array(':input[name="upload_type"]' =>array('value' => 'single_file'),),),
+    // IMPORTANT for allowing file upload: 
+    // this works only when changing the /etc/php*/apache2/php.ini post_max_size and filesize in apache
+    '#upload_validators' => array('file_validate_extensions' => array('nc tgz'),
+                                  'file_validate_size' => array(1500 * 1024 * 1024),),
+    '#upload_location' => 'public://'.$folder.'/'.$uuid,
+  );
+
+  // here we just upload a tgz that will have to be uncompressed and validated. 
+  $form['creation']['tgz_file'] = array(
+    '#type' => 'managed_file',
+    '#title' => t('Upload Your File with a .tgz extension'),
+    '#states'=> array('visible' => array(':input[name="upload_type"]' =>array('value' => 'tgz_file'),),),
+    // IMPORTANT for allowing file upload: 
+    // this works only when changing the /etc/php*/apache2/php.ini post_max_size and filesize in apache
+    '#upload_validators' => array('file_validate_extensions' => array('tgz'),
+                                  'file_validate_size' => array(1500 * 1024 * 1024),),
+    '#upload_location' => 'public://'.$folder.'/'.$uuid,
+  );
+
+  // here we upload one file after the other as netcdf
+  $form['creation']['file_multi'] = array(
+    '#type' => 'managed_file',
+    '#multiple' => TRUE,
+    '#name' => 'files[]',
+    '#title' => t('Upload Your Files as netCFD'),
+    '#states'=> array('visible' => array(':input[name="upload_type"]' =>array('value' => 'mult_netcdf'),),),
+    '#description' => t('Only netcdf files can be uploaded.'),
+    '#attributes' => array('multiple' => 'multiple'),
+    // IMPORTANT for allowing file upload: 
+    // this works only when changing the /etc/php*/apache2/php.ini post_max_size and filesize in apache
+    '#upload_validators' => array('file_validate_extensions' => array('nc'),
+                                  'file_validate_size' => array(1500 * 1024 * 1024),),
+    '#upload_location' => 'public://'.$folder.'/'.$uuid,
+  );
+
+  // move to page two
+  $form['topagetwo'] = array(
     '#type' => 'submit',
     '#value' => 'Next >>',
   );
+
+  // call the validation function 
   $form['#validate'][] = 'dataset_upload_multipage_p1_validate';
+
   return $form;
 }
 
 function dataset_upload_multipage_p1_validate($form, &$form_state) {
- //only validates page1
- //if (isset($form_state['storage']['page_two'])) {
- //   return;
- // }
-  $fname = $form['creation']['file'];
-  $fid = $fname["#file"]->fid;
-  $uri = $fname["#file"]->uri;  //public://dataset_upload_folder/t.nc   
-  $path = explode("://", $uri)[1];  //dataset_upload_folder/t.nc
-  $name = explode("dataset_upload_folder/", $uri)[1]; //t.nc
+  //only validates page1
+  if (isset($form_state['storage']['page_two']) || isset($form_state['storage']['page_three'])) {
+    return;
+  }
+  
   $fdir = drupal_realpath('public://'); // /var/www/multisite/sites/mysite/files
+  //find out which file type has been uploaded. This is probably the wrong way to do it. 
+  if (file_exists($form['creation']['single_file']["#file"]->uri)){
+    $ufile = $form['creation']['single_file'];
+  }
+  if (file_exists($form['creation']['tgz_file']["#file"]->uri)){
+    $ufile = $form['creation']['tgz_file'];
+  }
 
-  //pass filename
-  $form_state['dataset_fid'] = $fname["#file"]->fid;
-  $form_state['dataset_fname'] = $fname["#file"]->filename;
+  $fid = $ufile["#file"]->fid;       // file id number
+  $uuid = $ufile["#file"]->uuid;       // file id number
+  $uri = $ufile["#file"]->uri;       // public://dataset_upload_folder/uuid/t.nc   
+  $rel_folder = explode("://",$ufile["#upload_location"])[1]; // dataset_upload_folder/uuid
+  $rel_file = explode("://", $uri)[1];   // dataset_upload_folder/uuid/t.nc
+  $fname = $ufile["#file"]->filename; // t.nc
+  $name = explode(".nc",$fname)[0]; // t
+  
+  $full_path_to_ufolder = $fdir.'/'.$rel_folder;            // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid
+  //$full_path_to_folder  = $fdir.'/'.$rel_folder.'/'.$name;// /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid/file
+  //$uri_to_folder  = 'public://'.$rel_folder.'/'.$name;    // public://dataset_upload_folder/uuid/file
+  $full_path_to_folder  = $fdir.'/'.$rel_folder.'/'.$uuid;  // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid/file
+  $uri_to_folder  = 'public://'.$rel_folder.'/'.$uuid;      // public://dataset_upload_folder/uuid/file
+  $full_path_to_file    = $fdir.'/'.$rel_file;              // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid/file.tgz
+
+  //pass fileid and filename
+  $form_state['dataset_file'] = $ufile["#file"];
+  $form_state['dataset_dir'] = $uri_to_folder;
+
+  //Checks that the directory exists and is writable.
+  file_prepare_directory($full_path_to_folder, FILE_CREATE_DIRECTORY);
 
 
-  //define cf output
-  $ex_out_cf = $fdir.'/dataset_upload_folder/'.$name.'_cf.html';
-  //define acdd output
-  $ex_out_acdd = $fdir.'/dataset_upload_folder/'.$name.'_acdd.html';
-  //define nc_to_mmd output
-  $ex_out_nctommd = $fdir.'/dataset_upload_folder/'.$name.'.xml';
-
-  //Run the compliant checker
-  exec('compliance-checker -v --format=html --output='.$ex_out_cf.' --test=cf:1.6 '.$fdir.'/'.$path, $out, $status1);
-  exec('compliance-checker -v --format=html --output='.$ex_out_acdd.' --test=acdd '.$fdir.'/'.$path, $out, $status2);
-  //$status = $status1 + $status2; 
-  //$ex_out = file_get_contents($ex_out_cf).file_get_contents($ex_out_acdd);
-  $status = $status1; 
-  $ex_out = file_get_contents($ex_out_cf);
-
-  //decide what to do according to the compliance checker exit status.
-  if($status !==0){
-     //if the cf-checker fails then give message and remove submission file also from DB. 
-     form_set_error('file','Your dataset is not following the netCDF/CF-1.6 and ACDD-1.3 standards. Your submission can not proceed. <br> 
-     Check your dataset and correct the errors before making a new submission.');
-     //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there. 
-     $file_notsaved = file_load($fid);
-     file_delete($file_notsaved);
-  }else{
-     drupal_set_message(t("Your dataset is compliant with CF and ACDD standards. The submission can now proceed."), 'status');
-     exec('/usr/local/bin/nc_to_mmd.pl --output='.$ex_out_nctommd.' '.$fdir.'/'.$path, $out_nctommd, $status_nctommd);
-     //get xml file content
-     $xml_content = file_get_contents($ex_out_nctommd); // this is a string from gettype 
-     //get xml object iterator 
-     $xml = new SimpleXmlIterator($xml_content);
-     //get xml object iterator with mmd namespaces
-     $xml_wns = $xml->children($xml->getNamespaces(true)['mmd']);
-
-     // extract mmd to the last child
-     function depth_mmd($prefix, $iterator) {
-        $kv_a = array();
-        foreach ($iterator as $k => $v) {
-           if ($iterator->hasChildren()) {
-              $kv_a = array_merge($kv_a, depth_mmd($prefix . ' ' . $k, $v));
-           } else {
-              //add mmd keys and values to form_state to be passed to the second page. 
-              $kv_a[] = array($prefix . ' ' . $k, (string)$v);
-           }
-        }
-        return $kv_a; //this function returms an array of arrys
+  if(strpos($uri,'.tgz')){
+     $fileInfo = file_load($fid);
+     $file = $fileInfo->uri;
+     $archiver = archiver_get_archiver($file);
+     if (!$archiver) {
+        throw new Exception(t('Cannot extract %file, not a valid archive.', array ('%file' => $file)));
      }
+     $files = $archiver->listContents();
+     $archiver->extract($uri_to_folder);
+     foreach ($files as $i){
 
-     $form_state['metadata'] = depth_mmd("", $xml_wns);
-
+        $fut = new stdClass;
+        $urif = $uri_to_folder.'/'.$i;
+        $fut->uid = $user->uid;
+        $fut->filename = $i;
+        $fut->uri = $urif;
+        $fut->filesize = filesize($urif);
+        $fut->status = 1;
+ 
+        file_save($fut);
+        file_validate_extensions($fut, 'nc');
+        drupal_set_message(print_r($i,TRUE),'warning');
+        drupal_set_message(print_r($fut,TRUE),'warning');
+     }
+  }else{
+     //mv the file to the new directory
+     file_move($ufile["#file"], $uri_to_folder.'/'.$fname, FILE_EXISTS_REPLACE);
   }
 
-  //remove validation files
-  if(file_exists($ex_out_cf)){
-     file_unmanaged_delete($ex_out_cf);
+
+  // extract mmd to the last child
+  function depth_mmd($prefix, $iterator) {
+     $kv_a = array();
+     foreach ($iterator as $k => $v) {
+        if ($iterator->hasChildren()) {
+           $kv_a = array_merge($kv_a, depth_mmd($prefix . ' ' . $k, $v));
+        } else {
+           //add mmd keys and values to form_state to be passed to the second page. 
+           $kv_a[] = array($prefix . ' ' . $k, (string)$v);
+        }
+     }
+     return $kv_a; //this function returns an array of arrys
   }
-  if(file_exists($ex_out_acdd)){
-     file_unmanaged_delete($ex_out_acdd);
+
+  // for each file in the tgz, define outputs
+  $fls = preg_grep('/^([^.])/', scandir($full_path_to_folder));
+  foreach ($fls as $value){
+    if(strpos($value,'.nc')){
+      $sfp = $full_path_to_folder.'/'.$value; 
+      $sfn = explode(".",$value)[0]; 
+      //define cf output
+      $ex_out_cf = $full_path_to_folder.'/'.$sfn.'_cf.html';
+      //define acdd output
+      $ex_out_acdd = $full_path_to_folder.'/'.$sfn.'_acdd.html';
+      //define nc_to_mmd output
+      $ex_out_nctommd = $full_path_to_folder.'/'.$sfn.'.xml';
+      exec('compliance-checker -v --format=html --output='.$ex_out_cf.' --test=cf:1.6 '.$sfp, $out, $status1);
+      exec('compliance-checker -v --format=html --output='.$ex_out_acdd.' --test=acdd '.$sfp, $out, $status2);
+      $status = $status1 + $status2;  // status = 0 passed
+      $ex_out = file_get_contents($ex_out_cf).file_get_contents($ex_out_acdd);
+
+      //decide what to do according to the compliance checker exit status.
+      //if($status !==0){
+      //   //if the cf-checker fails then give message and remove submission file also from DB. 
+      //   $file_notsaved = file_load($fid);
+      //   file_delete($file_notsaved);
+      //   file_unmanaged_delete_recursive($full_path_to_folder);
+      //   //unset ($form_state['storage']); 
+      //   //unset ($form_state['values']); 
+      //   //$form_state['rebuild'] = TRUE;
+      //   //$form_state['no_cache'] = TRUE;
+      //   //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there. 
+      //   form_set_error('file','Your dataset is not following the netCDF/CF-1.6 and ACDD-1.3 standards. Your submission can not proceed. <br> 
+      //   Check your dataset and correct the errors before making a new submission.');
+      //}else{
+         drupal_set_message(t("Your dataset is compliant with CF and ACDD standards. The submission can now proceed."), 'status');
+         exec('/usr/local/bin/nc_to_mmd.pl --output='.$ex_out_nctommd.' '.$sfp, $out_nctommd, $status_nctommd);
+         //get xml file content
+         $xml_content = file_get_contents($ex_out_nctommd); // this is a string from gettype 
+         //get xml object iterator 
+         $xml = new SimpleXmlIterator($xml_content); // problem with boolean
+         //$xml = simplexml_load_file($xml_content):
+         //get xml object iterator with mmd namespaces
+         $xml_wns = $xml->children($xml->getNamespaces(true)['mmd']);
+      
+         $form_state['metadata'] = depth_mmd("", $xml_wns);
+     // }
+
+      //remove validation files 
+      //if(file_exists($ex_out_cf)){
+      //   file_unmanaged_delete($ex_out_cf);
+      //}
+      //if(file_exists($ex_out_acdd)){
+      //   file_unmanaged_delete($ex_out_acdd);
+      //}
+    }else{
+         form_set_error('file','Your extracted '.$value.' file is not netCDF. The submission cannot proceed');
+    }
   }
 
   return $form;
@@ -145,16 +280,12 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
 function dataset_upload_multipage_form_page_two($form, &$form_state) {
 
   $form['dsfid'] = array(
-    '#type' => 'hidden',
-    '#value' => $form_state['dataset_fid'],
-  );
-
-  $form['dsfid'] = array(
     '#type' => 'fieldset',
-    '#description' => 'Your dataset: "' . $form_state['dataset_fname'] . '" has the metadata as reported in the following tabel. Please make sure they are correct before
+    '#description' => 'Your dataset: "' . $form_state['dataset_file']->filename . '" has the metadata as reported in the following table. Please make sure they are correct before
                      confirming your submission. If the metadata are not correct, cancel your submission, correct your information and proceed with a new submission.',
   );
 
+  //drupal_set_message(print_r($form_state,TRUE),'warning');
 
   $header = array('Metadata Key', 'Metadata value');
   $rows = $form_state['metadata'];
@@ -163,8 +294,76 @@ function dataset_upload_multipage_form_page_two($form, &$form_state) {
     '#markup' => theme('table', array('header'=>$header, 'rows'=>$rows)),
   );
 
+  $form['topagethree'] = array(
+    '#type' => 'submit',
+    '#value' => 'Next>>',
+  );
+  $form['clear'] = array(
+    '#type' => 'submit',
+    '#value' => 'Cancel Submission',
+    '#validate' => array('dataset_upload_multipage_form_clear'),
+  );
 
-  $form['review'] = array(
+  return $form;
+}
+
+function dataset_upload_multipage_form_page_three($form, &$form_state) {
+
+  $form['select_conf']['description'] = array(
+    '#title' => t('Select the services you would like to activate for your dataset'),
+    '#type' => 'radios',
+    '#options' => array('gridded_data' => t('Gridded data'), 
+                        'time_seriesg' => t('Time series gridded data'),
+                        'time_series' => t('Time series not gridded data')),
+  );
+
+
+  // here we just upload a tgz that will have to be uncompressed and validated. 
+  $form['select_conf']['gridded_data'] = array(
+    '#title' => t('Services'),
+    '#type' => 'checkboxes',
+    '#options' => array('https' => t('Download of dataset (http(s))'), 
+                        'opendap' => t('OPeNDAP (Remote access)'),
+                        'wms' =>t('WMS client (Web Map Server)')
+                  ),
+    '#default_value' => array('https', 'opendap', 'wms'),
+    '#states'=> array(
+    'visible' => array(
+        ':input[name="description"]' =>array('value' => 'gridded_data'),
+                 ),
+                 ),
+  );
+  $form['select_conf']['time_seriesg'] = array(
+    '#title' => t('Services'),
+    '#type' => 'checkboxes',
+    '#options' => array('https' => t('Download of dataset (http(s))'), 
+                        'opendap' => t('OPeNDAP (Remote access)'),
+                        'wms' =>t('WMS client (Web Map Server)')
+                  ),
+    '#default_value' => array('https', 'opendap', 'wms'),
+    '#states'=> array(
+    'visible' => array(
+        ':input[name="description"]' =>array('value' => 'time_seriesg'),
+                 ),
+                 ),
+  );
+  $form['select_conf']['time_series'] = array(
+    '#title' => t('Services'),
+    '#type' => 'checkboxes',
+    '#options' => array('https' => t('Download of dataset (http(s))'), 
+                        'opendap' => t('OPeNDAP (Remote access)')
+                  ),
+    //'#attributes' => array('checked' => 'unchecked'),
+    '#default_value' => array('https', 'opendap'),
+    '#states'=> array(
+    'visible' => array(
+        ':input[name="description"]' =>array('value' => 'time_series'),
+                 ),
+                 ),
+  );
+
+
+  $form['done'] = array(
     '#type' => 'submit',
     '#value' => 'Confirm',
   );
@@ -182,57 +381,63 @@ function dataset_upload_multipage_form_clear($form, $form_state) {
   drupal_set_message(t('Your dataset upload has been cancelled'),'warning');
   $form_state['storage']['page_one_values'] = $form_state['values'];
 
-// need to delete records from folder and DB
-  $file_notsaved = file_load($form_state['dataset_fid']);
-  file_delete($file_notsaved);
+// need to delete records: folder recursively and DB
+  file_unmanaged_delete_recursive($form_state['dataset_dir']);
+  file_delete($form_state['dataset_file']);
 
   unset ($form_state['values']);  
   unset ($form_state['storage']); 
   $form_state['rebuild'] = TRUE;
-  $form_state['redirect'] = ''; // Redirects the user.
+  $form_state['input'] = array();
 }
 
 function dataset_upload_multipage_form_submit($form, &$form_state) {
-  // Handle page 1 submissions
-  if ($form_state['clicked_button']['#id'] == 'edit-next') {
-    $form_state['storage']['page_two'] = TRUE; // We set this to determine
-                                               // which elements to display
-                                               // when the page reloads.
-    // Values below in the $form_state['storage'] array are saved
-    // to carry forward to subsequent pages in the form.
+  // Handle page 1 submissions: select files & next
+  if ($form_state['clicked_button']['#id'] == 'edit-topagetwo') {
+
+    $form_state['storage']['page_two'] = TRUE; 
     $form_state['storage']['page_one_values'] = $form_state['values'];
     $form_state["rebuild"] = TRUE;   // Added
+
+  // Handle page 2 submissions: review of metadata & next
+  }elseif ($form_state['clicked_button']['#id'] == 'edit-topagethree'){
+
+    $form_state["rebuild"] = TRUE;   // Added
+    $form_state['storage']['page_two'] = FALSE; 
+    $form_state['storage']['page_three'] = TRUE; 
+    $form_state['storage']['page_one_values'] = $form_state['values'];
+
   }elseif ($form_state['clicked_button']['#id'] == 'edit-clear'){
     unset ($form_state['storage']); 
   }else {
+    //drupal_set_message(print_r($form_state,TRUE), 'warning');
+
+    // Handle page 3 submissions: select services & done
+    //save configuration file 
+    $dataset_type = $form_state['values']['description'];
+    $selected_checkboxes = $form_state['values'][$dataset_type];
+  
+    if ($selected_checkboxes['https'] !== 0 ){
+       //drupal_set_message(print_r("down1",TRUE), 'warning');
+       $contents = '<thredds:service name="file" serviceType="HTTPServer" base="/opendap/hyrax/">';
+       $contents .= "\n";
+    }
+    if ($selected_checkboxes['opendap'] !== 0 ){
+       //drupal_set_message(print_r("down2",TRUE), 'warning');
+       $contents .= '<thredds:service name="dap" serviceType="OPeNDAP" base="/opendap/hyrax/">';
+       $contents .= "\n";
+    }
+    if ($selected_checkboxes['wms'] !== 0 ){
+       //drupal_set_message(print_r("down3",TRUE), 'warning');
+       $contents .= '<thredds:service name="wms" serviceType="WMS" base="https://ns9530k.ncwms.sigma2.no/ncWMS2/wms">';
+       $contents .= "\n";
+    }
+    $existing = $form_state['dataset_dir'] . '/'. explode(".nc",$form_state['dataset_file']->filename)[0] . '.cfg' ;
+    $result = file_save_data($contents, $existing, FILE_EXISTS_REPLACE);
+  
     drupal_set_message(t('Your dataset and related info have been submitted.'),'status');
     $form_state['redirect'] = ''; // Redirects the user.
     unset ($form_state['storage']); 
   }
-}
 
-function dataset_upload_add_submit_buttons($form_state) {
-  $buttons = array();
-  // Display 'Prev' button on all steps excluding first.
-  if ($form_state['storage']['step'] > 1) {
-    $buttons['prev'] = array(
-      '#type' => 'submit',
-      '#value' => 'Prev',
-    );
-  }
-  // Display 'Next' button on all steps excluding last.
-  if ($form_state['storage']['step'] < 3) {
-    $buttons['next'] = array(
-      '#type' => 'submit',
-      '#value' => 'Next',
-    );
-  }
-  // Display 'Finish' button on the last step.
-  if ($form_state['storage']['step'] == 3) {
-    $buttons['finish'] = array(
-      '#type' => 'submit',
-      '#value' => 'Confirm',
-    );
-  }
-  return $buttons;
 }
