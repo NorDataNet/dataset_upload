@@ -3,6 +3,8 @@ description = "Custom webform for upload of netcdf/cf files. Files are checked a
 core = 7.x
 
 files[] = dataset_upload.admin.inc
+files[] = includes/dataset_upload.validate.inc
+files[] = includes/dataset_upload.clear.inc
 
 ; 
 
