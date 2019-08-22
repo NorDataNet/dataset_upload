@@ -76,6 +76,7 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
   }
   
   $fdir = drupal_realpath('public://'); // /var/www/multisite/sites/mysite/files
+  // drupal_set_message('<pre>'.print_r($fdir,TRUE).'</pre>','warning');
   // folder defined by the module configuration
   $folder = variable_get('dataset_upload_folder');
   $uid = $user->uid;
@@ -114,7 +115,6 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
     $form_state['dataset_dir'] = $uri_to_folder;
     $form_state['dataset_fullpath'] = $full_path_to_folder;
     $form_state['unzipped_files'] = array();
-    //  drupal_set_message('<pre>'.print_r($form_state['dataset_dir'],TRUE).'</pre>','warning');
     //  drupal_set_message('<pre>'.print_r($form_state['unzipped_files'],TRUE).'</pre>','warning');
  
     if(strpos($furi,'.tgz') || strpos($furi, '.zip') || strpos($furi, '.tar')){

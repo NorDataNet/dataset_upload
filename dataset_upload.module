@@ -36,6 +36,20 @@ function dataset_upload_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_mail().
+ */
+function dataset_upload_mail($key, &$message, $params) {
+
+  if (isset($params['subject'])) {
+    $message['subject'] = $params['subject'];
+  }
+  if (isset($params['body'])) {
+    $message['body'][] = $params['body'];
+  }
+}
+
+
 // only logged user can submit the dataset
 function ask_for_login($calling_uri) {
   global $user; 
@@ -263,6 +277,7 @@ function dataset_upload_multipage_form_page_three($form, &$form_state) {
 }
 
 function dataset_upload_multipage_form_submit(&$form, &$form_state) {
+  global $user;
   
   // Handle page 1 submissions: select files & next, trigger validation
   if ($form_state['clicked_button']['#id'] == 'edit-topagetwo') {
@@ -316,10 +331,38 @@ function dataset_upload_multipage_form_submit(&$form, &$form_state) {
     $existing = $form_state['dataset_dir'] . '/'. explode(".",$form_state['dataset_file']->filename)[0] . '.cfg' ;
     file_save_data($contents, $existing, FILE_EXISTS_REPLACE);
   
+    $module = 'dataset_upload';
+    $key = 'dataset_upload_complete';
+
+    //$email_to = variable_get('site_mail', '');
+    $email_to = $user->mail;
+    $from = variable_get('site_mail', '');
+
+    $params = array(
+	    'body' => 'Your dataset has been uploaded on NorDataNet. The dataset will be delivered to NIRD, uploaded into the archive and a DOI will be given. When your dataset will be ready you will be notified. <br> Thank you for submitting your dataset through NorDataNet!<br> The NorDataNet team.',
+      'subject' => 'Dataset upload on NordataNet',
+    );
+
+    $language = language_default();
+    $send = TRUE;
+    $result = drupal_mail($module, $key, $email_to, $language, $params, $from, $send);
+    if ($result['result'] == TRUE) {
+      drupal_set_message(t('A message has been sent to your email: '.$user->mail));
+    }
+    else {
+      drupal_set_message(t('There was a problem sending your message and it was not sent.'), 'error');
+    }
 
     drupal_set_message(t('Your dataset and related info have been submitted.'),'status');
     $form_state['redirect'] = 'dataset_upload/form'; // Redirects the user.
     unset ($form_state['storage']); 
   }
 
+}
+
+/**
+ * Returns what to show on the completion page.
+ */
+function dataset_upload_complete() {
+  return 'Thank you for submitting your dataset';
 }
