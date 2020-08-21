@@ -1,0 +1,16 @@
+@startuml
+partition NorDataNet {
+(*) --> "Dataset upload"
+"Dataset upload" --> "Dataset validation"
+"Dataset validation" --> "Extraction of discovery metadata"
+"Extraction of discovery metadata" --> "Selection of services to activate"
+"Selection of services to activate" --> "Connect to NIRD"
+}
+
+partition NIRD {
+"Connect to NIRD" --> "Prepare project storage"
+"Prepare project storage" --> "Prepare archive"
+"Prepare archive" --> "Configure services"
+"Configure services" --> (*)
+}
+@enduml

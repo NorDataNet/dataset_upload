@@ -1,0 +1,29 @@
+@startuml
+actor DP as "Data provider"
+boundary UL as "NorDataNet\nupload interface"
+control CC as "NorDataNet\ncompliance checker"
+control NIRDA as "NIRD\nRDA API"
+entity NIRDPS as "NIRD\nProject Storage"
+entity NIRDAR as "NIRD\nRDA Storage"
+/'
+entity MMD as "Discovery metadata"
+entity "UUID"
+entity "DOI"
+collection "NIRD RDA"
+database Foo5
+'/
+DP -> UL : Upload a dataset
+UL -> CC : Check dataset
+CC -> UL : Return discovery metadata
+UL -> NIRDA : Create dataset
+NIRDA -> UL : Return UUID
+UL -> NIRDPS : Create directory for dataset
+UL -> NIRDPS : Upload dataset
+UL -> NIRDPS : Upload discovery metadata
+UL -> NIRDPS : Create manifest
+NIRDAR -> NIRDPS: Read manifest
+NIRDAR -> NIRDPS : Some kind of magic to get dataset and archive
+NIRDA -> UL : Dataset with UUID is in archive
+UL -> NIRDA : Request to publish dataset with UUID
+NIRDA -> DP : Return DOI
+@enduml
