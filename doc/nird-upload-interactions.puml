@@ -15,6 +15,8 @@ database Foo5
 DP -> UL : Upload a dataset
 UL -> CC : Check dataset
 CC -> UL : Return discovery metadata
+UL -> NIRDA : Get token
+NIRDA -> UL : Return token
 UL -> NIRDA : Create dataset
 NIRDA -> UL : Return UUID
 UL -> NIRDPS : Create directory for dataset
@@ -23,7 +25,9 @@ UL -> NIRDPS : Upload discovery metadata
 UL -> NIRDPS : Create manifest
 NIRDAR -> NIRDPS: Read manifest
 NIRDAR -> NIRDPS : Some kind of magic to get dataset and archive
+NIRDAR -> NIRDA : Update information
 NIRDA -> UL : Dataset with UUID is in archive
 UL -> NIRDA : Request to publish dataset with UUID
-NIRDA -> DP : Return DOI
+NIRDA -> UL : Return DOI
+UL -> DP : Return DOI and upload status
 @enduml
