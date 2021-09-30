@@ -1,0 +1,20 @@
+.warning.no-w-background {
+    background: #F5F5F5 !important;
+    border: #F5F5F5 !important;
+    color: black !important;
+}
+
+.status.no-s-background {
+    background: #F5F5F5 !important;
+    border: #F5F5F5 !important;
+    color: black !important;
+}
+
+.status.info {
+    background: #003366 !important;
+    border: #F5F5F5 !important;
+}
+
+div.messages.status a, div.messages.error a, div.messages.warning a {
+    color: black !important;
+}

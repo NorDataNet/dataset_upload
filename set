@@ -1,0 +1,18 @@
+        $session_id = $session->getId(); //Get the session ID.
+        $session->set('nird_upload_path', $upload_path);
+if($session->has('upload_archive') || ($session->get('upload_archive') === 'true')) {
+  $number_of_files = $session->get('num_files');
+        $session_id = $session->getId(); //Get the session ID.
+        $extract_path = $session->get('nird_upload_path') . '/extract/';
+        $session->set('current_upload_uuid', $uuid);
+                    $session->set('nird_fail_message', 'Compliance check failed for file:' .$filename. '. Please review issues, and try again with uptadated files.');
+                    $session->set("nird_failed", $out);
+                        $session->set('nird_failed_message', '<div><span class="w3-red"><em>Error: </em></span><span> Could not extract metadata from file: '.$filename. '</span></div>');
+                        $session->set('nird_failed', $mmd_output);
+                $session->set('upload_archive', 'true');
+                $session->set('num_files', $number_of_files);
+                    $session->set('nird_fail_message', "Compliance check failed for one ore more file in archive. Please review issues, and try again with uptadated files.");
+                    $session->set("nird_failed", $out);
+                  $session->set('nird_failed_message', '<div><span class="w3-red"><em>Error: </em></span><span> Could not extract metadata from one or more files in archive</span></div>');
+                  $session->set('nird_failed', $mmd_output);
+        $uuid = $session->get('current_upload_uuid'); //Get the stored uuid for this form submission

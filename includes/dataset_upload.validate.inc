@@ -1,7 +1,7 @@
 <?php
 
 function dataset_upload_multipage_validate_allnc($form, &$form_state) {
-  global $user; 
+  global $user;
   if($form_state['values']['upload_type'] == 'compressed_file'){
     $fdir = drupal_realpath('public://'); // /var/www/multisite/sites/mysite/files
     // folder defined by the module configuration
@@ -10,16 +10,16 @@ function dataset_upload_multipage_validate_allnc($form, &$form_state) {
     $file_upl_folder = $folder.'/'.$uid;
     $array_uc_files = array();
     $fid = $form["#file"]->fid;         // file id number, e.g. 12444
-    $fuuid = $form["#file"]->uuid;      // file uuid, e.g. 79ce9c0d-8bdf-4c1a-8346-d08f926690fa  
+    $fuuid = $form["#file"]->uuid;      // file uuid, e.g. 79ce9c0d-8bdf-4c1a-8346-d08f926690fa
     $fname = $form["#file"]->filename;  // file name, e.g. t.nc
     $furi = $form["#file"]->uri;         // public://dataset_upload_folder/uid/t.nc  or public://dataset_upload_folder/uid/t.tgz
-  
+
     //define some paths for handling of validation
     $rel_file = explode("://", $furi)[1];                           // dataset_upload_folder/uid/t.nc or dataset_upload_folder/uid/t.tgz
-    $full_path_to_folder  = $fdir.'/'.$file_upl_folder.'/'.$fuuid;  // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uid/uuid 
+    $full_path_to_folder  = $fdir.'/'.$file_upl_folder.'/'.$fuuid;  // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uid/uuid
     $full_path_to_file    = $fdir.'/'.$rel_file;                    // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid/file.tgz
     $uri_to_folder  = 'public://'.$file_upl_folder.'/'.$fuuid;      // public://dataset_upload_folder/uid/uuid
-   
+
     //Checks that the directory exists and is writable.
     file_prepare_directory($full_path_to_folder, FILE_CREATE_DIRECTORY);
 
@@ -28,7 +28,7 @@ function dataset_upload_multipage_validate_allnc($form, &$form_state) {
       $form_state['dataset_file'] = $form["#file"];
       $form_state['dataset_dir'] = $uri_to_folder;
       $form_state['unzipped_files'] = array();
-    
+
       $cfile = file_load($form["#file"]->fid)->uri;
       $archiver = archiver_get_archiver($cfile);
       try {
@@ -39,7 +39,7 @@ function dataset_upload_multipage_validate_allnc($form, &$form_state) {
       }
       $archiver->extract($uri_to_folder);
       foreach ($files as $i){
-     
+
         $fut = new stdClass;
         $urif = $uri_to_folder.'/'.$i;
         $fut->uid = $user->uid;
@@ -47,10 +47,10 @@ function dataset_upload_multipage_validate_allnc($form, &$form_state) {
         $fut->uri = $urif;
         $fut->filesize = filesize($urif);
         $fut->status = 1;
-      
+
         file_save($fut);
         array_push($array_uc_files, $fut);
-    
+
         //check that files in the compressed file are of netCDF format
         $val_content = file_validate_extensions($fut, 'nc');
         if (!empty($val_content)){
@@ -68,13 +68,13 @@ function dataset_upload_multipage_validate_allnc($form, &$form_state) {
 }
 
 function dataset_upload_multipage_p1_validate($form, &$form_state) {
-  global $user; 
+  global $user;
 
   //only validates page1
   if (isset($form_state['storage']['page_two']) || isset($form_state['storage']['page_three'])) {
     return;
   }
-  
+
   $fdir = drupal_realpath('public://'); // /var/www/multisite/sites/mysite/files
   // drupal_set_message('<pre>'.print_r($fdir,TRUE).'</pre>','warning');
   // folder defined by the module configuration
@@ -86,24 +86,24 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
   if ($form['single_file']["#file"] || $form['compressed_file']["#file"]){
 
     $array_uc_files = array();
-    //find out which file type has been uploaded (ufile). This is probably the wrong way to do it. 
+    //find out which file type has been uploaded (ufile). This is probably the wrong way to do it.
     if ($form['single_file']["#file"]){
       $ufile = $form['single_file'];
     } else {
       $ufile = $form['compressed_file'];
     }
-    
+
     $fid = $ufile["#file"]->fid;         // file id number, e.g. 12444
-    $fuuid = $ufile["#file"]->uuid;      // file uuid, e.g. 79ce9c0d-8bdf-4c1a-8346-d08f926690fa  
+    $fuuid = $ufile["#file"]->uuid;      // file uuid, e.g. 79ce9c0d-8bdf-4c1a-8346-d08f926690fa
     $fname = $ufile["#file"]->filename;  // file name, e.g. t.nc
     $furi = $ufile["#file"]->uri;         // public://dataset_upload_folder/uid/t.nc  or public://dataset_upload_folder/uid/t.tgz
 
     //define some paths for handling of validation
     $rel_file = explode("://", $furi)[1];                           // dataset_upload_folder/uid/t.nc or dataset_upload_folder/uid/t.tgz
-    $full_path_to_folder  = $fdir.'/'.$file_upl_folder.'/'.$fuuid;  // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uid/uuid 
+    $full_path_to_folder  = $fdir.'/'.$file_upl_folder.'/'.$fuuid;  // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uid/uuid
     $full_path_to_file    = $fdir.'/'.$rel_file;                    // /var/www/multisite/sites/mysite/files/dataset_upload_folder/uuid/file.tgz
     $uri_to_folder  = 'public://'.$file_upl_folder.'/'.$fuuid;      // public://dataset_upload_folder/uid/uuid
- 
+
     //Checks that the directory exists and is writable.
     //mv the file to the new directory
     file_prepare_directory($full_path_to_folder, FILE_CREATE_DIRECTORY);
@@ -116,7 +116,7 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
     $form_state['dataset_fullpath'] = $full_path_to_folder;
     $form_state['unzipped_files'] = array();
     //  drupal_set_message('<pre>'.print_r($form_state['unzipped_files'],TRUE).'</pre>','warning');
- 
+
     if(strpos($furi,'.tgz') || strpos($furi, '.zip') || strpos($furi, '.tar')){
       //load compressed file and decompress
       $cfile = file_load($fid)->uri;
@@ -131,11 +131,11 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
          dataset_upload_multipage_form_clear_p1($form, $form_state);
       }
       $archiver->extract($uri_to_folder);
-      
+
       $non_nc_discovered = FALSE;
       //make the files in the tgz Class Object
       foreach ($files as $i){
- 
+
         $fut = new stdClass;
         $urif = $uri_to_folder.'/'.$i;
         $fut->uid = $user->uid;
@@ -143,7 +143,7 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
         $fut->uri = $urif;
         $fut->filesize = filesize($urif);
         $fut->status = 1;
-  
+
         file_save($fut);
         array_push($array_uc_files, $fut);
 
@@ -174,19 +174,19 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
           if ($iterator->hasChildren()) {
              $kv_a = array_merge($kv_a, depth_mmd($prefix . ' ' . $k, $v));
           } else {
-             //add mmd keys and values to form_state to be passed to the second page. 
+             //add mmd keys and values to form_state to be passed to the second page.
              $kv_a[] = array($prefix . ' ' . $k, (string)$v);
           }
        }
        return $kv_a; //this function returns an array of arrys
     }
- 
+
     // for each file in the tgz, define outputs
     $fls = preg_grep('/^([^.])/', scandir($full_path_to_folder));
     foreach ($fls as $value){
     //foreach ($array_uc_files as $value){
-      $sfp = $full_path_to_folder.'/'.$value; 
-      $sfn = explode(".",$value)[0]; 
+      $sfp = $full_path_to_folder.'/'.$value;
+      $sfn = explode(".",$value)[0];
       //define cf output
       $ex_out_cf = $full_path_to_folder.'/'.$sfn.'_cf.html';
       //define acdd output
@@ -197,20 +197,20 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
       exec('compliance-checker -v -c lenient --format=html --output='.$ex_out_acdd.' --test=acdd '.$sfp, $out, $status2);
       $status = $status1 + $status2;  // status = 0 passed
       $ex_out = file_get_contents($ex_out_cf).file_get_contents($ex_out_acdd);
- 
+
       //decide what to do according to the compliance checker exit status.
       if($status !==0){
         if (sizeof($array_uc_files) > 1) {
-          //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there. 
-          form_set_error('single_file','Your dataset '.$fname.' contains at least one file not following the netCDF/CF-1.6 and ACDD-1.3 standards. Your submission can not proceed. <br> 
+          //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there.
+          form_set_error('single_file','Your dataset '.$fname.' contains at least one file not following the netCDF/CF-1.6 and ACDD-1.3 standards. Your submission can not proceed. <br>
           Check your dataset and correct the errors before making a new submission.');
         } else {
-          //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there. 
+          //do not show the checker output for the upload module. The user has to go back to the validation link and see the output there.
           form_set_error('compressed_file','Your dataset '.$value.' is not following the netCDF/CF-1.6 and ACDD-1.3 standards. <br>
-                          Your submission can not proceed. <br> 
+                          Your submission can not proceed. <br>
           Check your dataset and correct the errors before making a new submission.');
        }
-        
+
        //drupal_set_message('<pre>'.print_r($array_uc_files,TRUE).'</pre>','warning');
        if(!empty($array_uc_files)){
          foreach ($array_uc_files as $vv){
@@ -219,7 +219,7 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
        }
        //drupal_set_message('<pre>'.print_r($array_uc_files,TRUE).'</pre>','warning');
 
-       //if the cf-checker fails then give message and remove submission file also from DB. 
+       //if the cf-checker fails then give message and remove submission file also from DB.
        //dataset_upload_multipage_form_clear_p1($form, $form_state);
        file_unmanaged_delete_recursive($form_state['dataset_dir']);
 
@@ -227,16 +227,16 @@ function dataset_upload_multipage_p1_validate($form, &$form_state) {
         drupal_set_message(t("Your dataset ".$value." is compliant with CF and ACDD standards. The submission can now proceed."), 'status');
         exec('/usr/local/bin/nc_to_mmd.pl --output='.$ex_out_nctommd.' '.$sfp, $out_nctommd, $status_nctommd);
         //get xml file content
-        $xml_content = file_get_contents($ex_out_nctommd); // this is a string from gettype 
-        //get xml object iterator 
+        $xml_content = file_get_contents($ex_out_nctommd); // this is a string from gettype
+        //get xml object iterator
         $xml = new SimpleXmlIterator($xml_content); // problem with boolean
         //$xml = simplexml_load_file($xml_content):
         //get xml object iterator with mmd namespaces
         $xml_wns = $xml->children($xml->getNamespaces(true)['mmd']);
-      
+
         $form_state['metadata'][$value] = depth_mmd("", $xml_wns);
-      } 
-      //remove validation files 
+      }
+      //remove validation files
       if(file_exists($ex_out_cf)){
         file_unmanaged_delete($ex_out_cf);
       }
@@ -283,8 +283,11 @@ function dataset_upload_multipage_p2_validate($form, &$form_state) {
   if($fail_agg == True) {
     form_set_error('form','Your datasets cannot be aggregated. Check suggestions below:<br>'.print_r(implode('<br>',$msg_agg),TRUE));
   }
-  // agg_checker.py exit with status not 0, i.e. it could not be run. 
+  // agg_checker.py exit with status not 0, i.e. it could not be run.
   if($status_agg !== 0){
     form_set_error('form','The aggregation validation checker could not be run. Please take contact using the contact form.');
   }
+
+
+
 }

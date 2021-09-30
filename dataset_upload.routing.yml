@@ -1,0 +1,58 @@
+dataset_upload.form:
+  path: '/dataset_upload/form'
+  defaults:
+    _form: '\Drupal\dataset_upload\Form\DatasetUploadForm'
+    _title: 'Dataset upload form'
+  requirements:
+    #_permission: 'ALL'
+    _permission: 'nordatanet upload nird'
+
+dataset_upload.ccfail:
+  path: '/dataset_upload/form/failedCChecker'
+  defaults:
+    _controller: '\Drupal\dataset_upload\Controller\DatasetUploadController::failedCChecker'
+    _title: 'Dataset upload outcome'
+  requirements:
+    _permission: 'nordatanet upload nird'
+
+dataset_upload.mmdfail:
+  path: '/dataset_upload/form/failedMmd'
+  defaults:
+    _controller: '\Drupal\dataset_upload\Controller\DatasetUploadController::failedMmd'
+    _title: 'Dataset upload outcome'
+  requirements:
+    _permission: 'nordatanet upload nird'
+
+dataset_upload.admin_config_form:
+  path: '/admin/config/nordatanet/dataset_upload'
+  defaults:
+    _form: '\Drupal\dataset_upload\Form\DatasetUploadConfigurationForm'
+    _title: 'NorDataNet NIRD Configuration'
+  requirements:
+    _permission: 'administer site configuration'
+  options:
+    _admin_route: TRUE
+
+system.admin_config_nordatanet:
+  path: '/admin/config/nordatanet'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'NorDataNet'
+    description: 'NorDataNet Specific configuraton'
+  requirements:
+    _permission: 'administer site configuration'
+
+
+#dataset_upload.admin_config_form:
+#  title: 'NorDataNet Dataset Upload Configuration'
+#  description: 'Configure account and API endpoints for NorDataNet Integration'
+#  route_name: dataset_upload.admin_config_form
+#  parent: nordatanet.group.admin
+#  weight: 99
+
+#nordatanet.group.admin:
+#  title: 'NorDataNet'
+#  route_name: system.admin_config_nordatanet
+#  parent: system.admin_config
+#  description: 'NorDataNet Configuration'
+#  weight: -999
