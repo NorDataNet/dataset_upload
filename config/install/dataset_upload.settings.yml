@@ -1,6 +1,6 @@
-nird_username: magnar-test
-nird_password: 'mEt0No5&2'
-nird_api_base_uri: https://staging.web.archive-api.sigma2.no
+nird_username: ''
+nird_password: ''
+nird_api_base_uri: 'https://staging.web.archive-api.sigma2.no'
 nird_api_token_endpoint: /token
 nird_api_dataset_endpoint: /api/dataset/
 nird_api_subject_endpoint: /api/subject/

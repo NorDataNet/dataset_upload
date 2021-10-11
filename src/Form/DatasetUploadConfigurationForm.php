@@ -96,7 +96,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase {
     $form['api']['nird_api_subject_endpoint'] = [
       '#type'          => 'textfield',
       '#title'         => $this->t('NIRD API Subject endpoint'),
-        '#default_value' => $config->get('nird_api_dataset_endpoint'),
+        '#default_value' => $config->get('nird_api_subject_endpoint'),
       '#size' => 35,
     ];
 
@@ -117,7 +117,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase {
         $form['api']['nird_api_category_endpoint'] = [
           '#type'          => 'textfield',
           '#title'         => $this->t('NIRD API Category endpoint'),
-            '#default_value' => $config->get('nird_api_state_endpoint'),
+            '#default_value' => $config->get('nird_api_category_endpoint'),
           '#size' => 35,
         ];
 
@@ -131,7 +131,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase {
         $form['api']['nird_api_organization_endpoint'] = [
           '#type'          => 'textfield',
           '#title'         => $this->t('NIRD API Organization endpoint'),
-            '#default_value' => $config->get('nird_api_state_endpoint'),
+            '#default_value' => $config->get('nird_api_organization_endpoint'),
           '#size' => 35,
         ];
 

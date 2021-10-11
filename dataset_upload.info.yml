@@ -6,3 +6,5 @@ version: 1.0.1
 package: NorDataNet
 configure: dataset_upload.admin_config_form
 dependencies:
+  - metsis_lib
+  - dataset_validation

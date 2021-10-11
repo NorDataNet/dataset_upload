@@ -1,0 +1,17 @@
+services:
+  # NIRD API Client factory service.
+  dataset_upload.nird_api_client_factory:
+    class: \Drupal\dataset_upload\Service\NirdApiClientFactory
+    arguments:
+      - '@config.factory'
+      - '@http_client_factory'
+      - '@serialization.json'
+
+  # Create NIRD API Client service from  Service Factory.
+  dataset_upload.nird_api_client:
+    class: \Drupal\dataset_upload\Service\NirdApiClient
+    factory: ['@dataset_upload.nird_api_client_factory', 'create']
+
+  # AggregationChecker service
+  dataset_upload.aggregation_checker:
+    class: \Drupal\dataset_upload\Service\AggregationChecker

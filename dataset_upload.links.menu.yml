@@ -1,5 +1,12 @@
+dataset_upload.old_form:
+  title: 'Dataset upload OLD'
+  description: 'Tool for dataset upload, validation, and NIRD integration'
+  route_name: dataset_upload.old_form
+  menu_name: main
+  weight: 999
+
 dataset_upload.form:
-  title: 'Dataset upload NIRD'
+  title: 'Dataset upload'
   description: 'Tool for dataset upload, validation, and NIRD integration'
   route_name: dataset_upload.form
   menu_name: main

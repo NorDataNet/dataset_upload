@@ -1,0 +1,36 @@
+dataset_upload.settings:
+  type: config_object
+  mapping:
+    nird_username:
+      type: string
+      label: 'NIRD API Authentication username'
+    nird_password:
+      type: string
+      label: 'NIRD API Authentication password'
+    nird_api_base_uri:
+      type: uri
+      label: 'NIRD API Base URI'
+    nird_api_token_endpoint:
+      type: string
+      label: 'NIRD API Token endponint'
+    nird_api_dataset_endpoint:
+      type: string
+      label: 'NIRD API Dataset endponint'
+    nird_api_subject_endpoint:
+      type: string
+      label: 'NIRD API Subject endponint'
+    nird_api_license_endpoint:
+      type: string
+      label: 'NIRD API Licence endponint'
+    nird_api_state_endpoint:
+      type: string
+      label: 'NIRD API State endponint'
+    nird_api_category_endpoint:
+      type: string
+      label: 'NIRD API Category endpoint'
+    nird_api_person_endpoint:
+      type: string
+      label: 'NIRD API Person endponint'
+    nird_api_organization_endpoint:
+      type: string
+      label: 'NIRD API Organization endponint'
