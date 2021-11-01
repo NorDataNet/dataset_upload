@@ -345,12 +345,13 @@ $form['validation']['extracted_metadata'] = [
   /*  foreach($lics as $lic ) {
     $licence[] = $licences['licence'];
   }*/
+  dpm($licences);
   $form['dataset']['licence'] = [
   '#type' => 'select',
   '#title' => t("Licence"),
   '#empty_option' => t('- Select licence -'),
-  '#options' => array_combine($licence, $licence_name),
-  '#default_option' => $metadata['license'],
+  //'#options' => array_combine($licence, $licence_name),
+  //'#default_option' => $metadata['license'],
   '#required' => true,
   //    '#ajax' => [
   //      'callback' => '::licenceSelectCallback',
@@ -1102,7 +1103,7 @@ $form['validation']['extracted_metadata'] = [
         ];
 
         $json = Json::encode($dataset);
-        \Drupal::logger('dataset_upload')->debug($json);
+        //\Drupal::logger('dataset_upload')->debug($json);
         \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($dataset, TRUE) . '</code></pre>');
 
   /*
