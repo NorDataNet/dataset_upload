@@ -340,7 +340,7 @@ $form['validation']['extracted_metadata'] = [
 
 
   $licences = $form_state->get('api_licences');
-  $licence = array_column($licences, 'licence');
+  $licence = array_column($licences, 'name');
   $licence_name = array_column($licences, 'name');
   /*  foreach($lics as $lic ) {
     $licence[] = $licences['licence'];
@@ -350,7 +350,7 @@ $form['validation']['extracted_metadata'] = [
   '#type' => 'select',
   '#title' => t("Licence"),
   '#empty_option' => t('- Select licence -'),
-  //'#options' => array_combine($licence, $licence_name),
+  '#options' => array_combine($licence, $licence_name),
   //'#default_option' => $metadata['license'],
   '#required' => true,
   //    '#ajax' => [
