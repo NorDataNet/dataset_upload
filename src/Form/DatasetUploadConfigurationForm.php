@@ -7,6 +7,7 @@
  * Form NIRD configuration
  *
  */
+
 namespace Drupal\dataset_upload\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
@@ -20,45 +21,48 @@ use Drupal\Core\Url;
  *  {@inheritdoc}
  *
  *   */
-class DatasetUploadConfigurationForm extends ConfigFormBase {
-
+class DatasetUploadConfigurationForm extends ConfigFormBase
+{
   /*
    * {@inheritdoc}
   */
-  protected function getEditableConfigNames() {
-    return [
+    protected function getEditableConfigNames()
+    {
+        return [
       'dataset_upload.settings',
       ];
-  }
+    }
 
-  /*
-   * {@inheritdoc}
-   */
-  public function getFormId() {
-    return 'dataset_upload.admin_config_form';
-  }
+    /*
+     * {@inheritdoc}
+     */
+    public function getFormId()
+    {
+        return 'dataset_upload.admin_config_form';
+    }
 
-  /*
-   * {@inheritdoc}
-   */
-  public function buildForm(array $form, FormStateInterface $form_state) {
-    $config = $this->config('dataset_upload.settings');
-    //$form = array();
+    /*
+     * {@inheritdoc}
+     */
+    public function buildForm(array $form, FormStateInterface $form_state)
+    {
+        $config = $this->config('dataset_upload.settings');
+        //$form = array();
 
 
-    $form['account'] = array(
+        $form['account'] = array(
       '#type' => 'fieldset',
       '#title' => $this->t('Enter NIRD-API account details'),
-      '#tree' => TRUE,
+      //'#tree' => TRUE,
       );
 
-    $form['account']['usernaem'] = array(
+        $form['account']['username'] = array(
       '#type' => 'textfield',
       '#title' => t('Username'),
       '#description' => t("Enter account username"),
       '#default_value' => $config->get('nird_username'),
     );
-    $form['account']['password'] = array(
+        $form['account']['password'] = array(
       '#type' => 'password',
       '#title' => t('Password'),
       '#description' => t("Enter account password"),
@@ -66,39 +70,71 @@ class DatasetUploadConfigurationForm extends ConfigFormBase {
     );
 
 
-      $form['api'] = array(
+        $form['api'] = array(
         '#type' => 'fieldset',
         '#title' => $this->t('Enter NIRD-API endpoints'),
-        '#tree' => TRUE,
+        //'#tree' => TRUE,
         );
 
-    $form['api']['nird_api_base_uri'] = [
+        $form['api']['nird_api_base_uri'] = [
       '#type'          => 'url',
       '#title'         => $this->t('NIRD API base URI'),
         '#default_value' => $config->get('nird_api_base_uri'),
       '#size' => 60,
     ];
 
-    $form['api']['nird_api_token_endpoint'] = [
+        $form['api']['nird_api_token_endpoint'] = [
       '#type'          => 'textfield',
       '#title'         => $this->t('NIRD API Token endpoint'),
         '#default_value' => $config->get('nird_api_token_endpoint'),
       '#size' => 35,
     ];
 
-    $form['api']['nird_api_dataset_endpoint'] = [
+        $form['api']['nird_api_dataset_endpoint'] = [
       '#type'          => 'textfield',
       '#title'         => $this->t('NIRD API Dataset endpoint'),
         '#default_value' => $config->get('nird_api_dataset_endpoint'),
       '#size' => 35,
     ];
 
-    $form['api']['nird_api_subject_endpoint'] = [
+        $form['api']['nird_api_subject_endpoint'] = [
       '#type'          => 'textfield',
       '#title'         => $this->t('NIRD API Subject endpoint'),
         '#default_value' => $config->get('nird_api_subject_endpoint'),
       '#size' => 35,
     ];
+
+        $form['api']['nird_api_subject_endpoint'] = [
+      '#type'          => 'textfield',
+      '#title'         => $this->t('NIRD API Subject endpoint'),
+        '#default_value' => $config->get('nird_api_subject_endpoint'),
+      '#size' => 35,
+    ];
+
+
+        $form['api']['nird_api_domain_endpoint'] = [
+      '#type'          => 'textfield',
+      '#title'         => $this->t('NIRD API Domain endpoint'),
+        '#default_value' => $config->get('nird_api_domain_endpoint'),
+      '#size' => 35,
+    ];
+
+
+        $form['api']['nird_api_field_endpoint'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('NIRD API Field endpoint'),
+            '#default_value' => $config->get('nird_api_field_endpoint'),
+          '#size' => 35,
+        ];
+
+
+
+        $form['api']['nird_api_subfield_endpoint'] = [
+              '#type'          => 'textfield',
+              '#title'         => $this->t('NIRD API Subfield endpoint'),
+                '#default_value' => $config->get('nird_api_subfield_endpoint'),
+              '#size' => 35,
+            ];
 
 
         $form['api']['nird_api_license_endpoint'] = [
@@ -136,43 +172,91 @@ class DatasetUploadConfigurationForm extends ConfigFormBase {
         ];
 
 
-    return parent::buildForm($form, $form_state);
- }
+        $form['data_manager'] = [
 
-  /*
-   * {@inheritdoc}
-   *
-   * NOTE: Implement form validation here
-   */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
+        '#type' => 'fieldset',
+        '#title' => t('Default data manager organization'),
+        '#description' => t('Fill out the default data manager organization for the upload form. This info will be used to prefill the data manager organization.'),
+        '#tree' => true,
+      ];
 
-return parent::validateForm($form, $form_state);
-  }
 
-  /*
-   * {@inheritdoc}
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
+      $form['data_manager']['longname'] = [
+    '#type' => 'textfield',
+      '#title' => $this
+        ->t('Long name'),
+        '#default_value' => $config->get('data_manager_longname'),
+        //'#disabled' => true,
+    ];
+
+      $form['data_manager']['shortname'] = [
+      '#type' => 'textfield',
+        '#title' => $this
+          ->t('Short name'),
+          '#default_value' => $config->get('data_manager_shortname'),
+          //'#disabled' => true,
+      ];
+      $form['data_manager']['contactemail'] = [
+        '#type' => 'email',
+          '#title' => $this
+            ->t('Contact email'),
+            '#default_value' => $config->get('data_manager_contactemail'),
+            //'#disabled' => true,
+        ];
+      $form['data_manager']['homepage'] = [
+            '#type' => 'url',
+              '#title' => $this
+                ->t('Homepage'),
+                '#default_value' => $config->get('data_manager_homepage'),
+              //  '#disabled' => true,
+            ];
+
+
+        return parent::buildForm($form, $form_state);
+    }
+
+    /*
+     * {@inheritdoc}
+     *
+     * NOTE: Implement form validation here
+     */
+    public function validateForm(array &$form, FormStateInterface $form_state)
+    {
+        return parent::validateForm($form, $form_state);
+    }
+
+    /*
+     * {@inheritdoc}
+     */
+    public function submitForm(array &$form, FormStateInterface $form_state)
+    {
 
     /**
      * Save the configuration
     */
-    $values = $form_state->getValues();
+        $values = $form_state->getValues();
+        //dpm($values);
 
-    $this->configFactory->getEditable('dataset_upload.settings')
-      ->set('nird_username', $values['nird_username'])
-      ->set('nird_password', $values['nird_password'])
+        $this->configFactory->getEditable('dataset_upload.settings')
+      ->set('nird_username', $values['username'])
+      ->set('nird_password', $values['password'])
       ->set('nird_api_base_uri', $values['nird_api_base_uri'])
       ->set('nird_api_token_endpoint', $values['nird_api_token_endpoint'])
       ->set('nird_api_dataset_endpoint', $values['nird_api_dataset_endpoint'])
       ->set('nird_api_subject_endpoint', $values['nird_api_subject_endpoint'])
+      ->set('nird_api_domain_endpoint', $values['nird_api_domain_endpoint'])
+      ->set('nird_api_field_endpoint', $values['nird_api_field_endpoint'])
+      ->set('nird_api_subfield_endpoint', $values['nird_api_subfield_endpoint'])
       ->set('nird_api_license_endpoint', $values['nird_api_license_endpoint'])
       ->set('nird_api_state_endpoint', $values['nird_api_state_endpoint'])
       ->set('nird_api_category_endpoint', $values['nird_api_category_endpoint'])
       ->set('nird_api_person_endpoint', $values['nird_api_person_endpoint'])
       ->set('nird_api_organization_endpoint', $values['nird_api_organization_endpoint'])
-
+      ->set('data_manager_longname', $values['data_manager']['longname'])
+      ->set('data_manager_shortname', $values['data_manager']['shortname'])
+      ->set('data_manager_contactemail', $values['data_manager']['contactemail'])
+      ->set('data_manager_homepage', $values['data_manager']['homepage'])
       ->save();
-    parent::submitForm($form, $form_state);
-  }
+        parent::submitForm($form, $form_state);
+    }
 }

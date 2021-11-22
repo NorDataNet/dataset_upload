@@ -3,7 +3,7 @@
  * @file
  * Contains \Drupal\dataset_upload\DatasetUploadForm
  *
- * This form will upload a MMD file and create landig page with doi
+ * Form for registering NIRD datasets
  *
  */
 
@@ -149,7 +149,7 @@ class DatasetUploadForm extends DatasetValidationForm
          * function for that step/page
          */
         if ($form_state->has('page') && $form_state->get('page') == 2) {
-            dpm('building dataset form');
+            //dpm('building dataset form');
             return self::buildDatasetForm($form, $form_state);
         }
 
@@ -198,7 +198,9 @@ class DatasetUploadForm extends DatasetValidationForm
        */
        $user = \Drupal\user\Entity\User::load($this->currentUser->id());
        //dpm($user);
-       \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, TRUE) . '</code></pre>');
+       //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, TRUE) . '</code></pre>');
+       //Get the config object from config factory.
+       $config = self::config('dataset_upload.settings');
 
       $form['#tree'] = true;
     $form['validation-message'] = [
@@ -226,18 +228,27 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 $form['validation']['extracted_metadata'] = [
   '#type' => 'details',
   '#title' => t("Show extracted metadata"),
-  '#open' => true,
+  '#open' => false,
 ];
 
-//foreach($metadata as $key => $value) {
-/*
-  $form['validation']['extracted_metadata'] = [
+$table_data = [];
+foreach($metadata as $key => $value) {
+array_push($table_data, [(string) $key, (string) $value]);
+}
+//dpm($table_data);
+//}
+/*  $form['validation']['extracted_metadata'] = [
     '#type' => 'table',
     '#caption' => 'Extracted metadata for ' .$form_state->get('filename'),
     '#header' => ['Metadata Key', 'Metadata Value'],
-    '#rows' => $metadata,
+    //'#rows' => array(array_keys($metadata),array_values($metadata)),
+    '#rows' => $table_data,
     ];
-    */
+*/
+  //  foreach($metadata as $key => $value) {
+  //    $form['validation']['extracted_metadata']
+  //  }
+
   //}
     if($form_state->has('archived_files')) {
       //$metadata = $form_state->get('metadata')[$form_state->get('archived_files')[0]];
@@ -253,10 +264,10 @@ $form['validation']['extracted_metadata'] = [
     $form['dataset'] = [
   '#type' => 'fieldset',
   '#title' => t("Dataset information"),
-  '#open' => true,
-  '#attributes' => [
+  //'#open' => true,
+//  '#attributes' => [
     //'class' => ['w3-border-green', 'w3-border'],
-  ],
+//  ],
 
   ];
 
@@ -286,9 +297,7 @@ $form['validation']['extracted_metadata'] = [
   '#value' => $metadata['summary'], //$prefill[' abstract'],
   '#size' => 120,
   '#required' => true,
-  '#attributes' => [
-    'disabled' => true,
-  ],
+  '#disabled' => true,
   ];
 
     /**
@@ -345,12 +354,13 @@ $form['validation']['extracted_metadata'] = [
   /*  foreach($lics as $lic ) {
     $licence[] = $licences['licence'];
   }*/
-  dpm($licences);
+  //dpm($licences);
   $form['dataset']['licence'] = [
   '#type' => 'select',
   '#title' => t("Licence"),
   '#empty_option' => t('- Select licence -'),
   '#options' => array_combine($licence, $licence_name),
+  //'#options' => [ 'NLOD' => 'NLOD'],
   //'#default_option' => $metadata['license'],
   '#required' => true,
   //    '#ajax' => [
@@ -407,9 +417,9 @@ $form['validation']['extracted_metadata'] = [
   //'#suffix' => '</div>',
   //'#open' => TRUE,
   '#tree' => true,
-  '#attributes' => [
+  //'#attributes' => [
   //'class' => ['w3-border-green', 'w3-border'],
-  ],
+  //],
 
   ];
     /*
@@ -506,30 +516,31 @@ $form['validation']['extracted_metadata'] = [
 '#type' => 'textfield',
   '#title' => $this
     ->t('First name'),
-    '#default_value' => $user->field_first_name->value,
-    '#disabled' => true,
+    //'#default_value' => $user->field_first_name->value,
+    '#default_value' => $user->get('field_first_name'),
+    //'#disabled' => true,
 ];
 
   $form['dataset']['contributor']['member']['lastname'] = [
   '#type' => 'textfield',
     '#title' => $this
       ->t('Last name'),
-      '#default_value' => $user->field_last_name->value,
-      '#disabled' => true,
+      '#default_value' => $user->get('field_last_name'),
+      //'#disabled' => true,
   ];
   $form['dataset']['contributor']['member']['email'] = [
     '#type' => 'email',
       '#title' => $this
         ->t('Email'),
       '#default_value' => $this->currentUser->getEmail(),
-      '#disabled' => true,
+      //'#disabled' => true,
     ];
   $form['dataset']['contributor']['member']['federatedid'] = [
         '#type' => 'number',
           '#title' => $this
             ->t('Federated ID'),
             '#default_value' => $this->currentUser->id(),
-            '#disabled' => true,
+            //'#disabled' => true,
         ];
 
   $form['dataset']['contributor']['uploader'] = [
@@ -562,34 +573,34 @@ $form['validation']['extracted_metadata'] = [
   '#type' => 'textfield',
     '#title' => $this
       ->t('Long name'),
-      '#default_value' => $metadata['institution'],
-      '#disabled' => true,
+      '#default_value' => $config->get('data_manager_longname'),
+      //'#disabled' => true,
   ];
 
     $form['dataset']['data_manager']['manager']['shortname'] = [
     '#type' => 'textfield',
       '#title' => $this
         ->t('Short name'),
-        '#default_value' => $metadata['institution_short_name'],
-        '#disabled' => true,
+        '#default_value' => $config->get('data_manager_shortname'),
+        //'#disabled' => true,
     ];
     $form['dataset']['data_manager']['manager']['contactemail'] = [
       '#type' => 'email',
         '#title' => $this
           ->t('Contact email'),
-          '#default_value' => $metadata['publisher_email'],
-          '#disabled' => true,
+          '#default_value' => $config->get('data_manager_contactemail'),
+          //'#disabled' => true,
       ];
     $form['dataset']['data_manager']['manager']['homepage'] = [
           '#type' => 'url',
             '#title' => $this
               ->t('Homepage'),
-              '#default_value' => $metadata['publisher_url'],
-              '#disabled' => true,
+              '#default_value' => $config->get('data_manager_homepage'),
+            //  '#disabled' => true,
           ];
 
 
-
+/*
               $form['dataset']['data_manager']['actions'] = [
                   '#type' => 'actions'
               ];
@@ -611,7 +622,7 @@ $form['validation']['extracted_metadata'] = [
                        'wrapper' => 'manager-wrapper',
                      ],
               ];
-
+*/
                 /**
                  * rights holder
                  */
@@ -627,35 +638,34 @@ $form['validation']['extracted_metadata'] = [
             ];
 
 
-            $form['dataset']['rights_holder']['holder']['firstname'] = [
+            $form['dataset']['rights_holder']['holder']['longname'] = [
           '#type' => 'textfield',
             '#title' => $this
-              ->t('First name'),
-              '#default_value' => $user->field_first_name->value,
-              '#disabled' => true,
-
+              ->t('Long name'),
+              '#default_value' => '', //Extract from metadata
+              //'#disabled' => true,
           ];
 
-            $form['dataset']['rights_holder']['holder']['lastname'] = [
+            $form['dataset']['rights_holder']['holder']['shortname'] = [
             '#type' => 'textfield',
               '#title' => $this
-                ->t('Last name'),
-                '#default_value' => $user->field_last_name->value,
-                  '#disabled' => true,
-                ];
-            $form['dataset']['rights_holder']['holder']['email'] = [
+                ->t('Short name'),
+                '#default_value' => '', //Extract from metadata
+                //'#disabled' => true,
+            ];
+            $form['dataset']['rights_holder']['holder']['contactemail'] = [
               '#type' => 'email',
                 '#title' => $this
-                  ->t('Email'),
-                '#default_value' => $this->currentUser->getEmail(),
-                '#disabled' => true,
+                  ->t('Contact email'),
+                  '#default_value' => '', //Extract from metadata
+                  //'#disabled' => true,
               ];
-            $form['dataset']['rights_holder']['holder']['federatedid'] = [
-                  '#type' => 'number',
+            $form['dataset']['rights_holder']['holder']['homepage'] = [
+                  '#type' => 'url',
                     '#title' => $this
-                      ->t('Federated ID'),
-                      '#default_value' => $this->currentUser->id(),
-                      '#disabled' => true,
+                      ->t('Homepage'),
+                      '#default_value' => '', //Extract from metadata
+                    //  '#disabled' => true,
                   ];
 
       /**
@@ -675,16 +685,16 @@ $form['validation']['extracted_metadata'] = [
 '#type' => 'textfield',
   '#title' => $this
     ->t('First name'),
-    '#default_value' => explode(' ',$metadata['creator_name'])[0],
-    '#disabled' => true,
+    '#default_value' => $metadata['creator_name'],
+    //'#disabled' => true,
 ];
 
   $form['dataset']['creator']['creator']['lastname'] = [
   '#type' => 'textfield',
     '#title' => $this
       ->t('Last name'),
-      '#default_value' => explode(' ',$metadata['creator_name'])[1],
-      '#disabled' => true,
+      '#default_value' => $metadata['creator_name'],
+      //'#disabled' => true,
       //'#default_value' => $this->currentUser->getDisplayName(),
   ];
   $form['dataset']['creator']['creator']['email'] = [
@@ -692,7 +702,7 @@ $form['validation']['extracted_metadata'] = [
       '#title' => $this
         ->t('Email'),
         '#default_value' => $metadata['creator_email'],
-        '#disabled' => true,
+        //'#disabled' => true,
       //'#default_value' => $this->currentUser->getEmail(),
     ];
 
@@ -705,14 +715,107 @@ $form['validation']['extracted_metadata'] = [
   //dpm($subjects);
   $domains = array_unique(array_column($subjects, 'domain'));
   //$fields = array_search('Humanities' )
-    $form['dataset']['subject'] = [
+
+
+
+
+$form['dataset']['subject'] = [
+  '#type' => 'fieldset',
+  '#title' => $this->t("Subject(s)"),
+  '#prefix' => '<div id="subject-wrapper">',
+  '#suffix' => '</div>',
+];
+
+$domain = $form_state->getValue(array('dataset','subject','domain'));
+$field = $form_state->getValue(array('dataset','subject','field'));
+$subfield = $form_state->getValue(array('dataset','subject','subfield'));
+
+// Gather the number of subjects in the form already.
+  $num_subjects = $form_state->get('num_subjects');
+  // We have to ensure that there is at least one subject field.
+  if ($num_subjects === NULL) {
+    $num_subjects = $form_state->set('num_subjects', 0);
+    $num_subjects = 0;
+  }
+
+$subjects_added = $form_state->get('subjects_added');
+if($subjects_added !== NULL) {
+  $form['dataset']['subject']['subjects'] = [
+      '#type' => 'container',
+  ];
+for ($i = 0; $i < $num_subjects; $i++) {
+/*  $form['dataset']['subject']['subjects'][$i] = [
+      '#type' => 'item',
+      '#title' => $this->t('Subject #' .$i+1),
+      '#markup' => $subjects_added[$i]['domain'] . ' > ' . $subjects_added[$i]['field'] . ' > ' . $subjects_added[$i]['subfield'],
+  ]; */
+}
+}
+    $form['dataset']['subject']['domain'] = [
   '#type' => 'select',
-  '#title' => t("Subject"),
-  '#empty_option' => t('- Select subject -'),
+  '#title' => t("Domain"),
+  '#empty_option' => t('- Select domain -'),
+  '#default_option' => $domain,
   '#options' => array_combine($domains,$domains),
+  '#ajax' => [
+    'wrapper' => 'subject-wrapper',
+    'callback' => '::subjectCallback',
+    'event' => 'change'
+  ],
   ];
 
+if(!empty($domain)) {
+  $fields = array_unique(array_column($this->nirdApiClient->getField($domain), 'field'));
 
+  $form['dataset']['subject']['field'] = [
+'#type' => 'select',
+'#title' => t("Field"),
+'#empty_option' => t('- Select field -'),
+'#default_option' => $field,
+'#options' => array_combine($fields,$fields),
+'#ajax' => [
+  'wrapper' => 'subject-wrapper',
+  'callback' => '::subjectCallback',
+  'event' => 'change'
+],
+];
+}
+
+if(!empty($field) && !empty($domain)) {
+  $subfields = array_unique(array_column($this->nirdApiClient->getSubField($domain, $field), 'subfield'));
+
+  $form['dataset']['subject']['subfield'] = [
+'#type' => 'select',
+'#title' => t("Subfield"),
+'#empty_option' => t('- Select subfield -'),
+'#options' => array_combine($subfields,$subfields),
+'#ajax' => [
+  'wrapper' => 'subject-wrapper',
+  'callback' => '::subjectCallback',
+  'event' => 'change'
+],
+];
+}
+if(!empty($field) && !empty($domain) && !empty($subfield)) {
+  $form['dataset']['subject']['actions'] = [
+   '#type' => 'actions',
+  ];
+
+    $form['dataset']['subject']['actions']['addsubject'] = array(
+  '#type' => 'submit',
+  '#value' => t('Add another subject'),
+  '#submit' => ['::addSubject'],
+      '#ajax' => [
+        'callback' => '::subjectCallback',
+        'wrapper' => 'subject-wrapper',
+      ],
+  );
+
+
+}
+
+//}
+//dpm($this->currentUser);
   /**
   * submit actions
   */
@@ -729,7 +832,7 @@ $form['validation']['extracted_metadata'] = [
 
     $form['actions']['cancel'] = array(
   '#type' => 'submit',
-  '#value' => t('Cancel submission'),
+  '#value' => $this->t('Cancel submission'),
   '#submit' => ['::cancelSubmission'],
   );
 
@@ -764,6 +867,7 @@ $form['validation']['extracted_metadata'] = [
        $form_state->set('api_category', $this->nirdApiClient->getCategory());
        //dpm('get licences');
        $form_state->set('api_licences', $this->nirdApiClient->getLicence());
+       //$form_state->set('api_licences', []);
        //dpm('get subject');
 
        $form_state->set('api_subjects', $this->nirdApiClient->getSubject());
@@ -771,7 +875,7 @@ $form['validation']['extracted_metadata'] = [
        //Extract Metadata from datasets
         \Drupal::logger('dataset_upload')->debug('extracting metadata');
        $metadata = self::extractMetadata($form, $form_state);
-       dpm($metadata);
+       //dpm($metadata);
        $form_state->set('metadata', $metadata);
 
      }
@@ -805,7 +909,7 @@ $form['validation']['extracted_metadata'] = [
  * Function for extracting metadata using the metsis_lib.nc_to_mmd service
  */
  private function extractMetadata(array &$form, FormStateInterface $form_state) {
-    $metadata = array();
+    $metadata = [];
 
     $output_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location')) . '/';
     $file_path = $form_state->get('file_path');
@@ -816,11 +920,16 @@ $form['validation']['extracted_metadata'] = [
       $md = $this->ncToMmd->getMetadata($file_path, $filename, $output_path);
 
       //Give back the metadata in a better structure for filling out the form.
-      //foreach($md as $key => $value) {
-      //  $metadata[$key] = $value;
-      //}
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($md, TRUE) . '</code></pre>');
+      $arr = $md[0];
+      for($i = 0; $i < count($arr); $i++) {
+        $metadata[(string) ltrim($arr[$i][0])] = $arr[$i][1];
+      }
+        \Drupal::logger('dataset_upload_metadata')->debug('<pre><code>' . print_r($arr, TRUE) . '</code></pre>');
       //\Drupal::logger('dataset_upload')->debug(implode(' ', $metadata[$filename]));
+      //dpm(array_keys($metadata));
+      //dpm($metadata);
+
+      //$metadata = $md;
     }
 
     //Process archived files
@@ -859,7 +968,7 @@ $form['validation']['extracted_metadata'] = [
        'license' => 'CCBY40',
 
      ];
-
+     //dpm($metadata);
     return $metadata;
  }
 
@@ -1021,6 +1130,14 @@ $form['validation']['extracted_metadata'] = [
         $category = $dataset['category'];
         $lang = $dataset['language'];
         $licence = $dataset['licence'];
+
+        //Override licence for testing.
+        $licence = [
+          'name' => 'Norwegian Licence for Open Government Data (NLOD)',
+          'archive' => 'http://data.norge.no/nlod/en/1.0',
+          'access' => 'http://data.norge.no/nlod/en/1.0',
+        ];
+
         $article = $dataset['article'];
         $contributor = $dataset['contributor'];
         $published = (int) $article['publication']['published'];
@@ -1080,9 +1197,11 @@ $form['validation']['extracted_metadata'] = [
         $dataset['language'] = [[
           'name' => $lang,
         ]];
-        $dataset['licence'] = [
-          'id' => $licence,
-        ];
+
+
+        $dataset['licence'] = $licence;
+      //    'id' => $licence,
+      //  ];
         $dataset['article'] = [
           $article
         ];
@@ -1103,14 +1222,19 @@ $form['validation']['extracted_metadata'] = [
         ];
 
         $json = Json::encode($dataset);
+        $form_state->set('json', $json);
         //\Drupal::logger('dataset_upload')->debug($json);
         \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($dataset, TRUE) . '</code></pre>');
+        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r(Json::encode($json), TRUE) . '</code></pre>');
 
   /*
    * Call the NIRD API create dataset endpoint
   */
       $result = $this->nirdApiClient->createDataset($dataset);
           \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($result, TRUE) . '</code></pre>');
+          $form_state->set('dataset_response', Json::encode($result));
+        $form_state->setRebuild();
+
 
     }
 
@@ -1348,6 +1472,81 @@ $form['validation']['extracted_metadata'] = [
         $form_state->setRebuild();
     }
 
+
+    public function subjectCallback(array &$form, FormStateInterface $form_state)
+    {
+
+        return  $form['dataset']['subject'];
+      }
+
+      public function fieldCallback(array &$form, FormStateInterface $form_state)
+      {
+      /*    $response = new AjaxResponse();
+          $domain = $form_state->getValue(array('dataset','subject','domain'));
+          $field = $form_state->getValue(array('dataset','subject','field'));
+          $subfields = array_unique(array_column($this->nirdApiClient->getSubField($domain, $field), 'subfield'));
+          //dpm($fields);
+          $field = [
+            'subfield' => [
+            '#type' => 'select',
+            '#title' => t("Field"),
+            '#empty_option' => t('- Select field -'),
+            '#options' => array_combine($fields,$fields),
+            '#ajax' => [
+              'wrapper' => 'subject-wrapper',
+              'callback' => '::fieldCallback',
+              'event' => 'change'
+            ],
+          ],
+          ];
+
+          $response->addCommand(new AppendCommand('#subject-wrapper', $field));
+          return $response;
+*/
+  return  $form['dataset']['subject'];
+
+        }
+
+
+
+  /**
+   * Submit handler for the "add another subject" button.
+   *
+   * Increments the max counter and causes a rebuild.
+   */
+  public function addSubject(array &$form, FormStateInterface $form_state) {
+    $num_subjects = $form_state->get('num_subjects');
+    $add_button = $num_subjects + 1;
+    $form_state->set('num_subjects', $add_button);
+
+
+    //Store the previous added subjects
+    $domain = $form_state->getValue(array('dataset','subject','domain'));
+    $field = $form_state->getValue(array('dataset','subject','field'));
+    $subfield = $form_state->getValue(array('dataset','subject','subfield'));
+
+    $subjects_added = $form_state->get('subjects_added');
+    if($subjects_added === NULL) {
+      $subjects_added = [];
+    }
+    if(!empty($field) && !empty($domain) && !empty($subfield)) {
+      array_push($subjects_added,[
+        'domain' => $domain,
+        'field' => $field,
+        'subfield' => $subfield,
+      ]);
+      $form_state->setValue(array('dataset','subject','domain'), NULL);
+      $form_state->setValue(array('dataset','subject','field'), NULL);
+      $form_state->setValue(array('dataset','subject','subfield'), NULL);
+    }
+    dpm($subjects_added);
+    $form_state->set('subjects_added', $subjects_added);
+
+    // Since our buildForm() method relies on the value of 'num_names' to
+    // generate 'name' form elements, we have to tell the form to rebuild. If we
+    // don't do this, the form builder will not call buildForm().
+    $form_state->setRebuild();
+  }
 
     public function licenceSelectCallback(array &$form, FormStateInterface $form_state)
     {

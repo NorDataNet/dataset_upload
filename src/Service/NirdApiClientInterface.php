@@ -61,6 +61,38 @@ interface NirdApiClientInterface {
   public function getSubject(string $domain = '', string $field = '', string $subfield = ''): array;
 
   /**
+   * Get the Domain controlled vocabulary from NIRD API.
+   *
+   *
+   * @return array
+   */
+  public function getDomain(): array;
+
+
+  /**
+   * Get the Field controlled vocabulary from NIRD API.
+   *
+   * @param string $domain
+   *
+   * @return array
+   */
+  public function getField(string $domain = ''): array;
+
+
+  /**
+   * Get the Subject controlled vocabulary from NIRD API.
+   *
+   * @param string $domain
+   * @param string $field
+   * @param string $subfield
+   *
+   * @return array
+   */
+  public function getSubField(string $domain = '', string $field = ''): array;
+
+
+
+  /**
    * Get the Licence controlled vocabulary from NIRD API.
    *
    * @param string $name
