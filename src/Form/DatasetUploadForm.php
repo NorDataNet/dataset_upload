@@ -220,6 +220,7 @@ class DatasetUploadForm extends DatasetValidationForm
        $user = \Drupal\user\Entity\User::load($this->currentUser->id());
        //dpm($user);
        \Drupal::logger('dataset_upload')->debug('Building datasetForm');
+       \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, TRUE) . '</code></pre>');
        //Get the config object from config factory.
        $config = self::config('dataset_upload.settings');
 
