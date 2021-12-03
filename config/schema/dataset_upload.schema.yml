@@ -50,6 +50,9 @@ dataset_upload.settings:
     upload_helptext:
       type: text_format
       label: 'Dataset upload instructions'
+    upload_dataset:
+      type: text_format
+      label: 'Dataset creation instructions'
     language:
       type: string
       label: 'Language code'

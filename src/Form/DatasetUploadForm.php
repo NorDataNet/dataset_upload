@@ -232,6 +232,15 @@ class DatasetUploadForm extends DatasetValidationForm
       '#suffix' => '</div>',
       '#allowed_tags' => ['div', 'span'],
     ];
+
+
+    $form['container']['message'] = [
+      '#prefix' => '<div class="w3-card">',
+      '#type' => 'markup',
+      '#markup' => Markup::create($config->get('helptext_dataset')['value']),
+      '#suffix' => '</div>',
+    ];
+
     //Get the extracted metadata to prefill the form.
     $metadata = $form_state->get('metadata'); //[$form_state->get('filename')];
     //$metadata = $metadata[$form_state->get('filename')];

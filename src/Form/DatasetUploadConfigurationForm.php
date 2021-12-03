@@ -218,11 +218,18 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
         ];
         $form['helptext-wrapper']['helptext-upload'] = [
             '#type'          => 'text_format',
-            '#title'         => $this->t('Dataset upload instructions'),
+            '#title'         => $this->t('Dataset upload form instructions'),
           '#description' => $this->t('Enter instructions to be shown before uploading dataset.'),
             '#format'        => $config->get('helptext_upload')['format'],
             '#default_value' => $config->get('helptext_upload')['value'],
           ];
+          $form['helptext-wrapper']['helptext-dataset'] = [
+              '#type'          => 'text_format',
+              '#title'         => $this->t('Dataset creation form instructions'),
+              '#description' => $this->t('Enter instructions to be shown when filling out the dataset information form.'),
+              '#format'        => $config->get('helptext_dataset')['format'],
+              '#default_value' => $config->get('helptext_dataset')['value'],
+            ];
 
 
         return parent::buildForm($form, $form_state);
@@ -275,6 +282,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('data_manager_contactemail', $values['data_manager']['contactemail'])
       ->set('data_manager_homepage', $values['data_manager']['homepage'])
       ->set('helptext_upload', $values['helptext-upload'])
+      ->set('helptext_dataset', $values['helptext-dataset'])
       ->save();
         parent::submitForm($form, $form_state);
     }
