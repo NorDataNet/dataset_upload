@@ -594,6 +594,8 @@ if($i == 0) { $uploader = true; } else {$uploader = false; }
   ];
 }
   if($contributor_type[$i] === 'organization') {
+    $holder_id = $i;
+/*
     $form['dataset']['contributor']['member'][$i] = [
       '#type' => 'container',
     ];
@@ -646,7 +648,7 @@ if($i == 0) { $uploader = true; } else {$uploader = false; }
             '#title' => $this->t('Uploader'),
             '#value' => $uploader,
             ];
-          
+*/
   }
 }
 
@@ -830,7 +832,7 @@ if($i == 0) { $uploader = true; } else {$uploader = false; }
                     '#description' => 'The rights holder institution',
                     '#open' => true,
                   ];
-
+/*
             $form['dataset']['rights_holder']['holder']['organization']['longname'] = [
           '#type' => 'textfield',
             '#title' => $this
@@ -864,6 +866,49 @@ if($i == 0) { $uploader = true; } else {$uploader = false; }
                     //  '#disabled' => true,
                     '#required' => true
                   ];
+*/
+$shortname = '';
+$longname = '';
+$words = str_word_count($contributor_name[$holder_id]);
+if($words > 1) {
+  $longname = $contributor_name[$holder_id];
+}
+else {
+  $shortname = $contributor_name[$holder_id];
+}
+$form['dataset']['rights_holder']['holder']['organization']['longname'] = [
+'#type' => 'textfield',
+'#title' => $this
+  ->t('Long name'),
+  '#default_value' => $longname, //Extract from metadata
+  '#required' => true
+  //'#disabled' => true,
+];
+
+$form['dataset']['rights_holder']['holder']['organization']['shortname'] = [
+'#type' => 'textfield',
+  '#title' => $this
+    ->t('Short name'),
+    '#default_value' => $shortname, //Extract from metadata
+    //'#disabled' => true,
+    '#required' => true
+];
+$form['dataset']['rights_holder']['holder']['organization']['contactemail'] = [
+  '#type' => 'email',
+    '#title' => $this
+      ->t('Contact email'),
+      '#default_value' => $contributor_email[$holder_id], //Extract from metadata
+      '#required' => true
+      //'#disabled' => true,
+  ];
+$form['dataset']['rights_holder']['holder']['organization']['homepage'] = [
+      '#type' => 'url',
+        '#title' => $this
+          ->t('Homepage'),
+          '#default_value' => $contributor_url[$holder_id], //Extract from metadata
+        //  '#disabled' => true,
+        '#required' => true
+      ];
 
       /**
        * creator
