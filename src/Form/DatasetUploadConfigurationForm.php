@@ -23,9 +23,9 @@ use Drupal\Core\Url;
  *   */
 class DatasetUploadConfigurationForm extends ConfigFormBase
 {
-  /*
-   * {@inheritdoc}
-  */
+    /*
+     * {@inheritdoc}
+    */
     protected function getEditableConfigNames()
     {
         return [
@@ -181,7 +181,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ];
 
 
-      $form['data_manager']['longname'] = [
+        $form['data_manager']['longname'] = [
     '#type' => 'textfield',
       '#title' => $this
         ->t('Long name'),
@@ -189,27 +189,40 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
         //'#disabled' => true,
     ];
 
-      $form['data_manager']['shortname'] = [
+        $form['data_manager']['shortname'] = [
       '#type' => 'textfield',
         '#title' => $this
           ->t('Short name'),
           '#default_value' => $config->get('data_manager_shortname'),
           //'#disabled' => true,
       ];
-      $form['data_manager']['contactemail'] = [
+        $form['data_manager']['contactemail'] = [
         '#type' => 'email',
           '#title' => $this
             ->t('Contact email'),
             '#default_value' => $config->get('data_manager_contactemail'),
             //'#disabled' => true,
         ];
-      $form['data_manager']['homepage'] = [
+        $form['data_manager']['homepage'] = [
             '#type' => 'url',
               '#title' => $this
                 ->t('Homepage'),
                 '#default_value' => $config->get('data_manager_homepage'),
               //  '#disabled' => true,
             ];
+
+        $form['helptext-wrapper'] = [
+          '#type' => 'fieldset',
+          '#title' => $this->t('Helptext and instruction'),
+          //'#tree' => TRUE,
+        ];
+        $form['helptext-wrapper']['helptext-upload'] = [
+            '#type'          => 'text_format',
+            '#title'         => $this->t('Dataset upload instructions'),
+          '#description' => $this->t('Enter instructions to be shown before uploading dataset.'),
+            '#format'        => $config->get('helptext_upload')['format'],
+            '#default_value' => $config->get('helptext_upload')['value'],
+          ];
 
 
         return parent::buildForm($form, $form_state);
@@ -222,6 +235,11 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
      */
     public function validateForm(array &$form, FormStateInterface $form_state)
     {
+      /**
+       * TODO: Add a test against NIRD API when saving the config, to check wheter
+       * username and password are valid, and client can connect to the NIRD API.
+       */
+
         return parent::validateForm($form, $form_state);
     }
 
@@ -256,6 +274,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('data_manager_shortname', $values['data_manager']['shortname'])
       ->set('data_manager_contactemail', $values['data_manager']['contactemail'])
       ->set('data_manager_homepage', $values['data_manager']['homepage'])
+      ->set('helptext_upload', $values['helptext-upload'])
       ->save();
         parent::submitForm($form, $form_state);
     }

@@ -1,0 +1,4 @@
+dataset_upload.configuration:
+  route_name: dataset_upload.admin_config_form
+  title: NIRD API Settings
+  base_route: dataset_upload.admin_config_form

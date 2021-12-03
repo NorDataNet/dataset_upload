@@ -15,3 +15,6 @@ services:
   # AggregationChecker service
   dataset_upload.aggregation_checker:
     class: \Drupal\dataset_upload\Service\AggregationChecker
+    # AggregationChecker service
+  dataset_upload.attribute_extractor:
+    class: \Drupal\dataset_upload\Service\AttributeExtractor

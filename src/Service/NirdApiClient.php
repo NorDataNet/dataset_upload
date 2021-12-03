@@ -448,11 +448,199 @@ try {
   $error['error'] = $e->getMessage();
   $error['request'] = $e->getRequest();
   return $error;
- 
+
 }
 
 
 
         return [];
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findPerson(
+      string $firstname = '',
+      string $lastname = '',
+      string $email = '',
+      string $federatedid = ''): array
+    {
+
+        if (empty($this->token)) {
+          $user = $this->config->get('nird_username');
+          $pass = $this->config->get('nird_password');
+            self::getToken('',
+            $user,
+            $pass,
+            '',
+            '',
+            ''
+        );
+        }
+
+        $response = $this->httpClient->get(
+          $this->config->get('nird_api_person_endpoint'), [
+          'base_uri' => $this->config->get('nird_api_base_uri'),
+          'query' => [
+            'firstname' => $firstname,
+            'lastname' => $lastname,
+            'email' => $email,
+            'federatedid' => $federatedid,
+          ],
+          'headers' => [
+            'Authorization' => "{$this->token_type} {$this->token}",
+            'Content-Type' => "application/json",
+            'Accept' => 'application/json',
+          ],
+        ],
+        );
+        //dpm($response->getStatusCode());
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            //$msg = $this->json::decode($contents);
+            //dpm($contents);
+            return $contents;
+        }
+
+        return [];
+    }
+
+    public function findOrganization(
+      string $longname = '',
+      string $shortname = '',
+      string $contactemail = '',
+      string $homepage = ''): array
+      {
+        if (empty($this->token)) {
+          $user = $this->config->get('nird_username');
+          $pass = $this->config->get('nird_password');
+            self::getToken('',
+            $user,
+            $pass,
+            '',
+            '',
+            ''
+        );
+        }
+
+        $response = $this->httpClient->get(
+          $this->config->get('nird_api_organization_endpoint'), [
+          'base_uri' => $this->config->get('nird_api_base_uri'),
+          'query' => [
+            'longname' => $longname,
+            'shortname' => $shortname,
+            'contactemail' => $contactemail,
+            'homepage' => $homepage,
+          ],
+          'headers' => [
+            'Authorization' => "{$this->token_type} {$this->token}",
+            'Content-Type' => "application/json",
+            'Accept' => 'application/json',
+          ],
+        ],
+        );
+        //dpm($response->getStatusCode());
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            //$msg = $this->json::decode($contents);
+            return $contents;
+        }
+
+        return [];
+      }
+
+
+      /**
+       * {@inheritDoc}
+       */
+      public function createPerson(
+        string $firstname = '',
+        string $lastname = '',
+        string $email = '',
+        string $federatedid = ''): array
+      {
+
+          if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+              self::getToken('',
+              $user,
+              $pass,
+              '',
+              '',
+              ''
+          );
+          }
+
+          $response = $this->httpClient->post(
+            $this->config->get('nird_api_person_endpoint'), [
+            'base_uri' => $this->config->get('nird_api_base_uri'),
+            'json' => [
+              'firstname' => $firstname,
+              'lastname' => $lastname,
+              'email' => $email,
+              'federatedid' => $federatedid,
+            ],
+            'headers' => [
+              'Authorization' => "{$this->token_type} {$this->token}",
+              'Content-Type' => "application/json",
+              'Accept' => 'application/json',
+            ],
+          ],
+          );
+          //dpm($response->getStatusCode());
+          if ($response->getStatusCode() === 200) {
+              $contents = $this->json::decode($response->getBody()->getContents());
+              //$msg = $this->json::decode($contents);
+              //dpm($contents);
+              return $contents;
+          }
+
+          return [];
+      }
+
+      public function createOrganization(
+        string $longname = '',
+        string $shortname = '',
+        string $contactemail = '',
+        string $homepage = ''): array
+        {
+          if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+              self::getToken('',
+              $user,
+              $pass,
+              '',
+              '',
+              ''
+          );
+          }
+
+          $response = $this->httpClient->post(
+            $this->config->get('nird_api_organization_endpoint'), [
+            'base_uri' => $this->config->get('nird_api_base_uri'),
+            'json' => [
+              'longname' => $longname,
+              'shortname' => $shortname,
+              'contactemail' => $contactemail,
+              'homepage' => $homepage,
+            ],
+            'headers' => [
+              'Authorization' => "{$this->token_type} {$this->token}",
+              'Content-Type' => "application/json",
+              'Accept' => 'application/json',
+            ],
+          ],
+          );
+          //dpm($response->getStatusCode());
+          if ($response->getStatusCode() === 200) {
+              $contents = $this->json::decode($response->getBody()->getContents());
+              //$msg = $this->json::decode($contents);
+              return $contents;
+          }
+
+          return [];
+        }
+
 }

@@ -101,6 +101,76 @@ interface NirdApiClientInterface {
    */
   public function getLicence(string $name = ''): array;
 
+
+
+  /**
+   * Find person quering the NIRD API.
+   *
+   * @param string $firstname
+   * @param string $lastname
+   * @param string $email
+   * @param string $federatedid
+   *
+   * @return array
+   */
+  public function findPerson(
+    string $firstname = '',
+    string $lastname = '',
+    string $email = '',
+    string $federatedid = ''): array;
+
+
+    /**
+     * Find organization quering the NIRD API.
+     *
+     * @param string $firstname
+     * @param string $lastname
+     * @param string $email
+     * @param string $federatedid
+     *
+     * @return array
+     */
+    public function findOrganization(
+      string $longname = '',
+      string $shortname = '',
+      string $contactemail = '',
+      string $homepage = ''): array;
+
+
+      /**
+       * Create person quering the NIRD API.
+       *
+       * @param string $firstname
+       * @param string $lastname
+       * @param string $email
+       * @param string $federatedid
+       *
+       * @return array
+       */
+      public function createPerson(
+        string $firstname = '',
+        string $lastname = '',
+        string $email = '',
+        string $federatedid = ''): array;
+
+
+        /**
+         * Create organization quering the NIRD API.
+         *
+         * @param string $firstname
+         * @param string $lastname
+         * @param string $email
+         * @param string $federatedid
+         *
+         * @return array
+         */
+        public function createOrganization(
+          string $longname = '',
+          string $shortname = '',
+          string $contactemail = '',
+          string $homepage = ''): array;
+
+
   /**
    * Create dataset using NIRD API.
    *

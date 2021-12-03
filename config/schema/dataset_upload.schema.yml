@@ -1,5 +1,6 @@
 dataset_upload.settings:
   type: config_object
+  label: 'NIRD API Configuration'
   mapping:
     nird_username:
       type: string
@@ -34,3 +35,21 @@ dataset_upload.settings:
     nird_api_organization_endpoint:
       type: string
       label: 'NIRD API Organization endponint'
+    data_manager_longname:
+      type: string
+      label: 'Default data manager org long name'
+    data_manager_shortname:
+      type: string
+      label: 'Default data manager org short name'
+    data_manager_contactemail:
+      type: string
+      label: 'Default data manager org contact email'
+    data_manager_homepage:
+      type: string
+      label: 'Default data manager org homepage'
+    upload_helptext:
+      type: text_format
+      label: 'Dataset upload instructions'
+    language:
+      type: string
+      label: 'Language code'
