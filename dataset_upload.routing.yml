@@ -1,11 +1,11 @@
-dataset_upload.old_form:
-  path: '/dataset_upload/form/old'
-  defaults:
-    _form: '\Drupal\dataset_upload\Form\DatasetUploadOldForm'
-    _title: 'Dataset upload form OLD'
-  requirements:
+#dataset_upload.old_form:
+#  path: '/dataset_upload/form/old'
+#  defaults:
+#    _form: '\Drupal\dataset_upload\Form\DatasetUploadOldForm'
+#    _title: 'Dataset upload form OLD'
+#  requirements:
     #_permission: 'ALL'
-    _permission: 'nordatanet upload nird'
+#    _permission: 'nordatanet upload nird'
 dataset_upload.form:
   path: '/dataset_upload/form'
   defaults:

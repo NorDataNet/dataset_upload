@@ -38,13 +38,16 @@ class AttributeExtractor
       'creator_role',
       'creator_email',
       'creator_url',
+      'creator_institution',
       'contributor_name',
       'contributor_type',
       'contributor_role',
       'contributor_email',
       'contributor_url',
       'date_created',
-      'id'
+      'id',
+      'institution',
+      'institution_short_name'
     ];
 
   /**

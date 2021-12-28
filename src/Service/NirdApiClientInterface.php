@@ -165,10 +165,7 @@ interface NirdApiClientInterface {
          * @return array
          */
         public function createOrganization(
-          string $longname = '',
-          string $shortname = '',
-          string $contactemail = '',
-          string $homepage = ''): array;
+          array $json = []): array;
 
 
   /**

@@ -575,12 +575,14 @@ try {
           $response = $this->httpClient->post(
             $this->config->get('nird_api_person_endpoint'), [
             'base_uri' => $this->config->get('nird_api_base_uri'),
-            'json' => [
+            'json' =>
+            [
               'firstname' => $firstname,
               'lastname' => $lastname,
               'email' => $email,
               'federatedid' => $federatedid,
             ],
+            'http_erros' => false,
             'headers' => [
               'Authorization' => "{$this->token_type} {$this->token}",
               'Content-Type' => "application/json",
@@ -600,10 +602,7 @@ try {
       }
 
       public function createOrganization(
-        string $longname = '',
-        string $shortname = '',
-        string $contactemail = '',
-        string $homepage = ''): array
+        array $json = []): array
         {
           if (empty($this->token)) {
             $user = $this->config->get('nird_username');
@@ -620,12 +619,14 @@ try {
           $response = $this->httpClient->post(
             $this->config->get('nird_api_organization_endpoint'), [
             'base_uri' => $this->config->get('nird_api_base_uri'),
-            'json' => [
+            'json' => $json,
+            'http_erros' => false,
+            /*[
               'longname' => $longname,
               'shortname' => $shortname,
               'contactemail' => $contactemail,
               'homepage' => $homepage,
-            ],
+            ],*/
             'headers' => [
               'Authorization' => "{$this->token_type} {$this->token}",
               'Content-Type' => "application/json",
