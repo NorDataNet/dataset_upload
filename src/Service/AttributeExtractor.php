@@ -87,7 +87,7 @@ class AttributeExtractor
           if(in_array($attrib, $this->global_attributes)) {
             $test = 'Attribute: ' . $attrib. ', value: ' . $value;
             $metadata[(string) $attrib] = (string) $value;
-            \Drupal::logger('dataset_upload_attribute_extract')->debug($test);
+            //\Drupal::logger('dataset_upload_attribute_extract')->debug($test);
         }
         }
       \Drupal::logger('dataset_upload_metadata')->debug('<pre><code>' . print_r($metadata, TRUE) . '</code></pre>');
