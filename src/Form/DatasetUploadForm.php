@@ -23,7 +23,7 @@ use Drupal\Component\Serialization\Json;
 use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-
+use Symfony\Component\Yaml\Yaml;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\AppendCommand;
@@ -33,6 +33,8 @@ use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\Exception;
 
 use Drupal\Core\Render\Markup;
+use Drupal\Component\Render\FormattableMarkup;
+
 
 use Drupal\dataset_validation\Form\DatasetValidationForm;
 
@@ -162,9 +164,25 @@ class DatasetUploadForm extends DatasetValidationForm
          * Test witch step/form page we are on, and call the corresponding buildForm
          * function for that step/page
          */
+
+        if ($form_state->has('nird_error')) {
+            $form['nird-error'] = [
+            '#type' => 'markup',
+           '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-red w3-pale-red w3-padding-16" id="nird-message">',
+           '#markup' => '<span>Someting went wrong!! </span>',
+           '#suffix' => '</div>',
+           '#allowed_tags' => ['div', 'span','strong'],
+         ];
+
+            $form = self::formPageFive($form, $form_state);
+            $this->cleanUp($this->currentUser->id(), $form_state);
+            return $form;
+        }
+
         if ($form_state->has('page') && $form_state->get('page') == 2) {
             //dpm('building dataset form');
-            return self::buildDatasetForm($form, $form_state);
+            return self::confirmServicesForm($form, $form_state);
+            //return self::buildDatasetForm($form, $form_state);
         }
 
         if ($form_state->has('page') && $form_state->get('page') == 3) {
@@ -175,11 +193,22 @@ class DatasetUploadForm extends DatasetValidationForm
             return self::formPageFour($form, $form_state);
         }
         if ($form_state->has('page') && $form_state->get('page') == 5) {
-            return self::formPageFive($form, $form_state);
+            return self::buildDatasetForm($form, $form_state);
+            //return self::confirmServicesForm($form, $form_state);
+        }
+        if ($form_state->has('page') && $form_state->get('page') == 6) {
+
+            //Cleanup now during development,
+            $this->cleanUp($this->currentUser->id(), $form_state);
+            return self::registrationConfirmedForm($form, $form_state);
+            //return self::confirmServicesForm($form, $form_state);
         }
         if ($session->has('dataset_upload_status')) {
-            \Drupal::logger('dataset_upload')->debug("Unsubmitted form found...cleaning up userid: " . $this->currentUser->id());
-            $this->cleanUp($this->currentUser->id(), $form_state);
+            $status = $session->get('dataset_upload_status');
+            if ($status !== 'confirmed') {
+                \Drupal::logger('dataset_upload')->debug("Unsubmitted form found...cleaning up userid: " . $this->currentUser->id());
+                $this->cleanUp($this->currentUser->id(), $form_state);
+            }
         }
 
         //Set form page/step
@@ -187,7 +216,7 @@ class DatasetUploadForm extends DatasetValidationForm
         //  dpm('building form page 1...');
         //dpm('buildeing parent form');
         //Get the upload valitation form
-        //$form_state->set('upload_location', 'public://dataset_upload_folder/');
+        $form_state->set('upload_basepath', 'public://dataset_upload_folder/');
         $form = parent::buildForm($form, $form_state);
         $form['container']['creation']['test'] = []; //[
 
@@ -220,19 +249,19 @@ class DatasetUploadForm extends DatasetValidationForm
         $user = \Drupal\user\Entity\User::load($this->currentUser->id());
         //dpm($user);
         \Drupal::logger('dataset_upload')->debug('Building datasetForm');
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, true) . '</code></pre>');
         //Get the config object from config factory.
         $config = self::config('dataset_upload.settings');
 
         $form['#tree'] = true;
-        $form['validation-message'] = [
-      '#type' => 'markup',
-      '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
-      '#markup' => '<span>Your dataset(s) is compliant with CF and ACDD standards. The submission can now proceed.</span>',
-      '#suffix' => '</div>',
-      '#allowed_tags' => ['div', 'span'],
-    ];
-
+        /*      $form['validation-message'] = [
+            '#type' => 'markup',
+            '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
+            '#markup' => '<span>Your dataset(s) is compliant with CF and ACDD standards. The submission can now proceed.</span>',
+            '#suffix' => '</div>',
+            '#allowed_tags' => ['div', 'span'],
+          ];
+        */
 
         $form['container']['message'] = [
       '#prefix' => '<div class="w3-card">',
@@ -305,7 +334,14 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
   ];
 
-
+        $form['dataset']['message'] = array(
+'#type' => 'markup',
+'#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-yellow w3-pale-yellow w3-padding-16" id="dataset-message">',
+'#type' => 'markup',
+'#markup' => '<span>Fill out all required fields in the form. Check that prefilled values are correct, and correct them.</span>',
+'#suffix' => '</div>',
+'#allowed_tags' => ['div', 'span'],
+);
         /**
          * Dataset title
          */
@@ -361,16 +397,18 @@ confirming your submission. If the metadata are not correct, cancel your submiss
   '#required' => true,
   ];
 
-if(isset($metadata['id'])) {
-        $form['dataset']['external_identifier'] = [
-'#type' => 'textfield',
-'#title' => $this->t("External identifier"),
-'#default_value' => isset($metadata['id']) ? $metadata['id'] : '', //$prefill[' title'],
-'#size' => 120,
-'#required' => true,
-//'#disabled' => true,
-];
-}
+        /*
+                if (isset($metadata['id'])) {
+                    $form['dataset']['external_identifier'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t("External identifier"),
+        '#default_value' => isset($metadata['id']) ? $metadata['id'] : '', //$prefill[' title'],
+        '#size' => 120,
+        '#required' => true,
+        //'#disabled' => true,
+        ];
+                }
+                */
         /**
          * language
          */
@@ -395,7 +433,7 @@ if(isset($metadata['id'])) {
         /*  foreach($lics as $lic ) {
           $licence[] = $licences['licence'];
         }*/
-        dpm($licences);
+        //dpm($licences);
         $form['dataset']['licence'] = [
   '#type' => 'select',
   '#title' => $this->t("Licence"),
@@ -475,47 +513,116 @@ if(isset($metadata['id'])) {
         $form['dataset']['article']['publication'] = [
           '#type' => 'fieldset',
           '#title' => $this->t('The publication(s) that describes the dataset.'),
-          '#discription' => $this->t('Add publications related to this dataset. The first publication added will be consiedered the primary publication.'),
-          '#prefix' => '<div id="publication-wrapper">',
-          '#suffix' => '</div>',
+          '#discription' => $this->t('Add publications related to this dataset. The first publication added will be consiedered the primary publication. If no publication add motivation/comment.'),
+          //'#prefix' => '<div id="publication-wrapper">',
+          //'#suffix' => '</div>',
+          '#attributes' => ['id' => 'publication-wrapper'],
           //'#tree' => TRUE,
         ];
 
         //$form['#tree'] = TRUE;
         //for ($i = 0; $i < $num_articles; $i++) {
         //for ($i = 0; $i < $num_articles; $i++) {
-        $form['dataset']['article']['publication']['published'] = [
-  '#type' => 'select',
-  '#title' => $this->t('Published'),
-  '#empty_option' => $this->t('- Select published status -'),
-  '#options' => [true =>'Yes', false => 'No'],
-  //'#required' => true,
+        if (null == $form_state->getValue(['dataset','article','publication','article-select'])) {
+            $publishedValue = 'published';
+        } else {
+            $publishedValue = $form_state->getValue(['dataset','article','publication','article-select']);
+        }
+        $form['dataset']['article']['publication']['article-select'] = [
+  '#type' => 'radios',
+  '#title' => $this->t('Enter DOI if this dataset have a published article. If not enter a reason/motivation'),
+  //'#empty_option' => $this->t('- Select published status -'),
+
+  '#options' => ['published' =>'Yes', 'no_publication' => 'No'],
+  '#default_value' => $publishedValue,
+  '#required' => true,
+  //'#name' => 'article-select',
   '#attributes' => [
         //define static name and id so we can easier select it
         // 'id' => 'colour_select',
-        'name' => 'publication-published',
+        //'name' => 'article-select',
       ],
+  /*  '#ajax' => [
+      'callback' => '::publicationSelectCallback',
+      'wrapper' => 'publication-wrapper',
+      'event' => 'change',
+      'disable-refocus' => true,
+
+    ],
+  */  //'#prefix' => '<div id="article-published">',
+    //'#suffix' => '</div>',
 
   ];
-        $form['dataset']['article']['publication']['reference']['doi'] = [
-  '#type' => 'textfield',
-  '#title' =>  $this->t('DOI reference'),
-  '#states' => [
-    'required' => [
-      ':input[name="publication-published"]' => ['value' => 1],
-    ],
-  //  'and',
-    'visible' => [
-      ':input[name="publication-published"]' => ['value' => 1],
-    ],
-    'optional' => [
-      ':input[name="publication-published"]' => ['value' => 0],
-    ],
-    //'invisible' => [
-    //  ':input[name="publication-published"]' => ['value' => 0, 'value' => NULL],
-    //],
-  ],
-  ];
+        //if (null == $form_state->getValue(['dataset','article','publication','select'])) {
+        $form['dataset']['article']['publication']['published']['reference']['doi']  = [
+          '#type' => 'textfield',
+          '#title' =>  $this->t('DOI reference'),
+          //'#required' => true,
+          '#states'=> [
+            'invisible' => [
+                ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'no_publication'],
+              ],
+          'visible' => [
+              ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'published'],
+            ],
+            'required' => [
+                ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'published'],
+            ],
+          ],
+
+            ];
+        $form['dataset']['article']['publication']['no_publication']['motivation']  = [
+          '#type' => 'textfield',
+          '#title' =>  $this->t('Motivation'),
+          //'#required' => true,
+          '#states'=> [
+            'invisible' => [
+                ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'published'],
+              ],
+            'visible' => [
+              ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'no_publication'],
+                ],
+                'required' => [
+                    ':input[name="dataset[article][publication][article-select]"]' => ['value' => 'no_publication'],
+                ],
+             ],
+
+            ];
+        //}
+        /*
+              $form['dataset']['article']['publication']['published'] = [
+            '#pefix' => '<div id="published">',
+            '#suffix' => '</div>',
+          ];
+
+              $form['dataset']['article']['publication']['no_publication']  = [
+              '#pefix' => '<div id="no-publication">',
+              '#suffix' => '</div>',
+            ];
+*/
+        /**
+         * ADD AJAX CALLBACK FOR THE CORRECT FORM IF IT IS PUBLISHED OR NOT
+         */
+        /*
+                $form['dataset']['article']['publication']['reference']['doi'] = [
+          '#type' => 'textfield',
+          '#title' =>  $this->t('DOI reference'),
+          '#states' => [
+            'required' => [
+              ':input[name="publication-published"]' => ['value' => 1],
+            ],
+          //  'and',
+            'visible' => [
+              ':input[name="publication-published"]' => ['value' => 1],
+            ],
+            'optional' => [
+              ':input[name="publication-published"]' => ['value' => 0],
+            ],
+            //'invisible' => [
+            //  ':input[name="publication-published"]' => ['value' => 0, 'value' => NULL],
+            //],
+          ],
+        ];*/
         /*
                 if ($num_articles > 1) {
                     $form['dataset']['article']['publication']['primary'] = [
@@ -602,11 +709,11 @@ if(isset($metadata['id'])) {
         // $form_state->set("depositor_count", $depositors);
         // \Drupal::logger('dataset_upload')->debug('Num of depositors: ' . $depositors);
 
-$depositor_name = $form_state->get('contributor_name');
-$depositor_email = $form_state->get('contributor_email');
-$depositor_url = $form_state->get('contributor_url');
-$depositor_type = $form_state->get('contributor_type');
-$depositor_role = $form_state->get('contributor_role');
+        $depositor_name = $form_state->get('contributor_name');
+        $depositor_email = $form_state->get('contributor_email');
+        $depositor_url = $form_state->get('contributor_url');
+        $depositor_type = $form_state->get('contributor_type');
+        $depositor_role = $form_state->get('contributor_role');
 
         $form['dataset']['depositor'] = [
   '#type' => 'fieldset',
@@ -618,16 +725,16 @@ $depositor_role = $form_state->get('contributor_role');
   ];
 
 
-//Prefill logged in user as primary uploader depositor
-$i=0;
-$form['dataset']['depositor'][$i]['member'] = [
+        //Prefill logged in user as primary uploader depositor
+        $i=0;
+        $form['dataset']['depositor'][$i]['member'] = [
 '#type' => 'details',
 '#title' =>  $this->t('Person(s)'),
 '#open' => true,
 ];
 
 
-$form['dataset']['depositor'][$i]['member']['firstname'] = [
+        $form['dataset']['depositor'][$i]['member']['firstname'] = [
 '#type' => 'textfield',
 '#title' => $this
 ->t('First name'),
@@ -637,7 +744,7 @@ $form['dataset']['depositor'][$i]['member']['firstname'] = [
 '#disabled' => true,
 ];
 
-$form['dataset']['depositor'][$i]['member']['lastname'] = [
+        $form['dataset']['depositor'][$i]['member']['lastname'] = [
 '#type' => 'textfield',
 '#title' => $this
 ->t('Last name'),
@@ -646,7 +753,7 @@ $form['dataset']['depositor'][$i]['member']['lastname'] = [
 //  '#default_value' => $user->get('field_last_name'),
 '#disabled' => true,
 ];
-$form['dataset']['depositor'][$i]['member']['email'] = [
+        $form['dataset']['depositor'][$i]['member']['email'] = [
 '#type' => 'email',
 '#title' => $this
 ->t('Email'),
@@ -654,21 +761,21 @@ $form['dataset']['depositor'][$i]['member']['email'] = [
 '#required' => true,
 '#disabled' => true,
 ];
-$form['dataset']['depositor'][$i]['member']['federatedid'] = [
-'#type' => 'textfield',
+        $form['dataset']['depositor'][$i]['member']['federatedid'] = [
+'#type' => 'hidden',
 '#title' => $this
 ->t('Federated ID'),
 '#default_value' => (string) $this->currentUser->id(),
 '#required' => true,
 '#disabled' => true,
 ];
-$uploader = false;
-$type = 'hidden';
-if ($i == 0) {
-    $uploader = true;
-    $type = 'checkbox';
-}
-$form['dataset']['depositor'][$i]['uploader'] = [
+        $uploader = false;
+        $type = 'hidden';
+        if ($i == 0) {
+            $uploader = true;
+            $type = 'checkbox';
+        }
+        $form['dataset']['depositor'][$i]['uploader'] = [
 '#type' => $type,
 '#title' =>  $this->t('Uploader'),
 '#description' =>  $this->t('The primary depositor are considered as the uploader'),
@@ -689,8 +796,8 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //],
 ];
 
-// $depositor_person_count =1;
-// $depositor_org_count = 0;
+        // $depositor_person_count =1;
+        // $depositor_org_count = 0;
 //         for ($i=1; $i<$depositor_person_count+1; $i++) {
 //             \Drupal::logger('dataset_upload')->debug('depositors person [i]: ' . $i);
 //             if ($depositor_type[$i] === 'person') {
@@ -698,28 +805,28 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //     '#type' => 'details',
 //     '#title' =>  $this->t('Person(s)'),
 //     '#open' => true,
-//   ];
+        //   ];
 //
 //
 //                 $form['dataset']['depositor'][$i]['member']['firstname'] = [
-// '#type' => 'textfield',
-//   '#title' => $this
+        // '#type' => 'textfield',
+        //   '#title' => $this
 //     ->t('First name'),
 //     '#default_value' => explode(' ', $depositor_name[$i])[0],
 //     '#required' => true
 //     //'#default_value' => $user->get('field_first_name'),
 //     //'#disabled' => true,
-// ];
+        // ];
 //
 //                 $form['dataset']['depositor'][$i]['member']['lastname'] = [
-//   '#type' => 'textfield',
+        //   '#type' => 'textfield',
 //     '#title' => $this
 //       ->t('Last name'),
 //       '#default_value' => array_slice(explode(' ', $depositor_name[$i]), 1),
 //       '#required' => true
 //     //  '#default_value' => $user->get('field_last_name'),
 //       //'#disabled' => true,
-//   ];
+        //   ];
 //                 $form['dataset']['depositor'][$i]['member']['email'] = [
 //     '#type' => 'email',
 //       '#title' => $this
@@ -768,7 +875,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //         for ($i=$depositor_person_count; $i<$depositors; $i++) {
 //             \Drupal::logger('dataset_upload')->debug('depositors org [i]: ' . $i);
 //             if ($depositor_type[$i] === 'organization') {
-// //    $holder_id = $i;
+        // //    $holder_id = $i;
 //
 //                 $form['dataset']['depositor'][$i]['member'] = [
 //       '#type' => 'details',
@@ -785,13 +892,13 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //                     $shortname = $depositor_name[$i];
 //                 }
 //                 $form['dataset']['depositor'][$i]['member']['longname'] = [
-//   '#type' => 'textfield',
+        //   '#type' => 'textfield',
 //     '#title' => $this
 //       ->t('Long name'),
 //       '#default_value' => $depositor_name[$i], //Extract from metadata
 //       '#required' => true
 //       //'#disabled' => true,
-//   ];
+        //   ];
 //
 //                 $form['dataset']['depositor'][$i]['member']['shortname'] = [
 //     '#type' => 'textfield',
@@ -831,7 +938,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //         }
 //         $form['dataset']['depositor']['actions'] = [
 //       '#type' => 'actions'
-//   ];
+        //   ];
 //         $form['dataset']['depositor']['actions']['add_person'] = [
 //       '#type' => 'submit',
 //       '#submit' => ['::addDepositorPerson'],
@@ -840,7 +947,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //            'callback' => '::depositorCallback',
 //            'wrapper' => 'depositor-wrapper',
 //          ],
-//   ];
+        //   ];
 //         $form['dataset']['depositor']['actions']['add_org'] = [
 //       '#type' => 'submit',
 //       '#submit' => ['::addDepositorOrg'],
@@ -849,7 +956,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //            'callback' => '::depositorCallback',
 //            'wrapper' => 'depositor-wrapper',
 //          ],
-//   ];
+        //   ];
 //
 //         $form['dataset']['depositor']['actions']['remove_person'] = [
 //       '#type' => 'submit',
@@ -859,7 +966,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //            'callback' => '::depositorCallback',
 //            'wrapper' => 'depositor-wrapper',
 //          ],
-//   ];
+        //   ];
 //
 //         $form['dataset']['depositor']['actions']['remove_org'] = [
 //       '#type' => 'submit',
@@ -869,7 +976,7 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //            'callback' => '::depositorCallback',
 //            'wrapper' => 'depositor-wrapper',
 //          ],
-//   ];
+        //   ];
 
         //           dpm('manager persons: ' .$num_manager_person);
         //         dpm('manager orgs: ' .$num_manager_org);
@@ -884,14 +991,14 @@ $form['dataset']['depositor'][$i]['uploader'] = [
             '#suffix' => '</div>',
       ];
 
-  for ($i=0; $i< count($depositor_role) ; $i++) {
-        //$managers = 2;
-        if(strtolower($depositor_role[$i]) === strtolower('Data Manager') && $depositor_type[$i] === 'person') {
-        //for($i=0; $i < $managers; $i++ )
-        $form['dataset']['data_manager'][$i]['manager'] = [
-        '#type' => 'details',
+        for ($i=0; $i< count($depositor_role) ; $i++) {
+            //$managers = 2;
+            if (strtolower($depositor_role[$i]) === strtolower('Data Manager') && $depositor_type[$i] === 'person') {
+                //for($i=0; $i < $managers; $i++ )
+                $form['dataset']['data_manager'][$i]['manager'] = [
+        '#type' => 'fieldgroup',
         '#title' => $this->t('Data manager person'),
-        '#open' => true,
+        //'#open' => true,
       //'#type' => 'container',
       //'#title' => $this->t('Data manager'),
       //'#description' => $this->t('The person or organization that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
@@ -902,17 +1009,17 @@ $form['dataset']['depositor'][$i]['uploader'] = [
     ];
 
 
-        $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
+                $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
   '#type' => 'textfield',
     '#title' => $this
       ->t('First name'),
-        '#default_value' => explode(' ', $depositor_name[$i])[0],
+        '#default_value' => trim(explode(' ', $depositor_name[$i])[0]),
       '#required' => true
       //'#default_value' => $user->get('field_first_name'),
       //'#disabled' => true,
   ];
 
-        $form['dataset']['data_manager'][$i]['manager']['lastname'] = [
+                $form['dataset']['data_manager'][$i]['manager']['lastname'] = [
     '#type' => 'textfield',
       '#title' => $this
         ->t('Last name'),
@@ -921,84 +1028,135 @@ $form['dataset']['depositor'][$i]['uploader'] = [
       //  '#default_value' => $user->get('field_last_name'),
         //'#disabled' => true,
     ];
-        $form['dataset']['data_manager'][$i]['manager']['email'] = [
+                $form['dataset']['data_manager'][$i]['manager']['email'] = [
       '#type' => 'email',
         '#title' => $this
           ->t('Email'),
-        '#default_value' => $depositor_email[$i],
+        '#default_value' => trim($depositor_email[$i]),
         '#required' => true
         //'#disabled' => true,
       ];
-        $form['dataset']['data_manager'][$i]['manager']['federatedid'] = [
-          '#type' => 'textfield',
+                $form['dataset']['data_manager'][$i]['manager']['federatedid'] = [
+          '#type' => 'hidden',
             '#title' => $this
               ->t('Federated ID'),
               '#default_value' => '',
-              '#required' => true
+              //'#required' => true
               //'#disabled' => true,
           ];
-        }
-      }
-
-
-      /**
-       * TODO: add data manager organization form datamanger role are org
-       */
-/*
-        $manager_org_idx = array_search('organization', $depositor_type);
-        \Drupal::logger('dataset_upload')->debug('manager org idx: ' . $manager_org_idx);
-        $shortname = '';
-        $longname = '';
-        $words = str_word_count($depositor_name[$manager_org_idx]);
-        if ($words > 1) {
-            $longname = $depositor_name[$manager_org_idx];
-        } else {
-            $shortname = $depositor_name[$manager_org_idx];
-        }
-        $form['dataset']['data_manager'][1]['manager'] = [
-            '#type' => 'details',
-            '#title' => $this->t('Data manager organization'),
-            '#open' => true,
+            } else {
+                $form['dataset']['data_manager'][$i]['manager'] = [
+              '#type' => 'fieldgroup',
+              '#title' => $this->t('Data manager person'),
+              //'#open' => true,
+            //'#type' => 'container',
+            //'#title' => $this->t('Data manager'),
             //'#description' => $this->t('The person or organization that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
             //'#tree' => true,
             //'#prefix' => '<div id="manager-wrapper">',
             //'#suffix' => '</div>',
 
-        ];
-        $form['dataset']['data_manager'][1]['manager']['longname'] = [
-  '#type' => 'textfield',
-    '#title' => $this
-      ->t('Long name'),
-      '#default_value' => $longname,
-      //'#disabled' => true,
-      '#required' => true
-  ];
-
-        $form['dataset']['data_manager'][1]['manager']['shortname'] = [
-    '#type' => 'textfield',
-      '#title' => $this
-        ->t('Short name'),
-        '#default_value' => $shortname,
-        //'#disabled' => true,
-        '#required' => true
-    ];
-        $form['dataset']['data_manager'][1]['manager']['contactemail'] = [
-      '#type' => 'email',
-        '#title' => $this
-          ->t('Contact email'),
-          '#default_value' => $depositor_email[$manager_org_idx],
-          //'#disabled' => true,
-          '#required' => true
-      ];
-        $form['dataset']['data_manager'][1]['manager']['homepage'] = [
-          '#type' => 'url',
-            '#title' => $this
-              ->t('Homepage'),
-              '#default_value' => $depositor_url[$manager_org_idx],
-            //  '#disabled' => true,
-            '#required' => true
           ];
-*/
+
+
+                $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
+        '#type' => 'textfield',
+          '#title' => $this
+            ->t('First name'),
+              '#default_value' => '',
+            '#required' => true
+            //'#default_value' => $user->get('field_first_name'),
+            //'#disabled' => true,
+        ];
+
+                $form['dataset']['data_manager'][$i]['manager']['lastname'] = [
+          '#type' => 'textfield',
+            '#title' => $this
+              ->t('Last name'),
+              '#default_value' =>  '',
+              '#required' => true
+            //  '#default_value' => $user->get('field_last_name'),
+              //'#disabled' => true,
+          ];
+                $form['dataset']['data_manager'][$i]['manager']['email'] = [
+            '#type' => 'email',
+              '#title' => $this
+                ->t('Email'),
+              '#default_value' => '',
+              '#required' => true
+              //'#disabled' => true,
+            ];
+                $form['dataset']['data_manager'][$i]['manager']['federatedid'] = [
+                '#type' => 'hidden',
+                  '#title' => $this
+                    ->t('Federated ID'),
+                    '#default_value' => '',
+                    //'#required' => true
+                    //'#disabled' => true,
+                ];
+                break;
+            }
+        }
+
+
+        /**
+         * TODO: add data manager organization form datamanger role are org
+         */
+        /*
+                $manager_org_idx = array_search('organization', $depositor_type);
+                \Drupal::logger('dataset_upload')->debug('manager org idx: ' . $manager_org_idx);
+                $shortname = '';
+                $longname = '';
+                $words = str_word_count($depositor_name[$manager_org_idx]);
+                if ($words > 1) {
+                    $longname = $depositor_name[$manager_org_idx];
+                } else {
+                    $shortname = $depositor_name[$manager_org_idx];
+                }
+                $form['dataset']['data_manager'][1]['manager'] = [
+                    '#type' => 'details',
+                    '#title' => $this->t('Data manager organization'),
+                    '#open' => true,
+                    //'#description' => $this->t('The person or organization that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
+                    //'#tree' => true,
+                    //'#prefix' => '<div id="manager-wrapper">',
+                    //'#suffix' => '</div>',
+
+                ];
+                $form['dataset']['data_manager'][1]['manager']['longname'] = [
+          '#type' => 'textfield',
+            '#title' => $this
+              ->t('Long name'),
+              '#default_value' => $longname,
+              //'#disabled' => true,
+              '#required' => true
+          ];
+
+                $form['dataset']['data_manager'][1]['manager']['shortname'] = [
+            '#type' => 'textfield',
+              '#title' => $this
+                ->t('Short name'),
+                '#default_value' => $shortname,
+                //'#disabled' => true,
+                '#required' => true
+            ];
+                $form['dataset']['data_manager'][1]['manager']['contactemail'] = [
+              '#type' => 'email',
+                '#title' => $this
+                  ->t('Contact email'),
+                  '#default_value' => $depositor_email[$manager_org_idx],
+                  //'#disabled' => true,
+                  '#required' => true
+              ];
+                $form['dataset']['data_manager'][1]['manager']['homepage'] = [
+                  '#type' => 'url',
+                    '#title' => $this
+                      ->t('Homepage'),
+                      '#default_value' => $depositor_url[$manager_org_idx],
+                    //  '#disabled' => true,
+                    '#required' => true
+                  ];
+        */
 
         /*
                       $form['dataset']['data_manager']['actions'] = [
@@ -1103,39 +1261,39 @@ $form['dataset']['depositor'][$i]['uploader'] = [
         //     }
         // }
 //         $form['dataset']['rights_holder']['person'] = [
-//   '#type' => 'details',
-//   '#title' => 'Person',
-//   '#description' => 'The contact person of the rights holder institution',
-//   '#open' => true,
-// ];
+        //   '#type' => 'details',
+        //   '#title' => 'Person',
+        //   '#description' => 'The contact person of the rights holder institution',
+        //   '#open' => true,
+        // ];
 //
 //         $form['dataset']['rights_holder']['person']['firstname'] = [
-// '#type' => 'textfield',
-// '#title' => $this
-//   ->t('First name'),
-//   '#default_value' => explode(' ', $creator_names[$holder_person_id])[0],
-//   '#required' => true
-//   //'#default_value' => $user->get('field_first_name'),
-//   //'#disabled' => true,
-// ];
+        // '#type' => 'textfield',
+        // '#title' => $this
+        //   ->t('First name'),
+        //   '#default_value' => explode(' ', $creator_names[$holder_person_id])[0],
+        //   '#required' => true
+        //   //'#default_value' => $user->get('field_first_name'),
+        //   //'#disabled' => true,
+        // ];
 //
 //         $form['dataset']['rights_holder']['person']['lastname'] = [
-// '#type' => 'textfield',
-//   '#title' => $this
+        // '#type' => 'textfield',
+        //   '#title' => $this
 //     ->t('Last name'),
 //     '#default_value' => array_slice(explode(' ', $creator_names[$holder_person_id]), 1),
 //     '#required' => true
-//   //  '#default_value' => $user->get('field_last_name'),
+        //   //  '#default_value' => $user->get('field_last_name'),
 //     //'#disabled' => true,
-// ];
+        // ];
 //         $form['dataset']['rights_holder']['person']['email'] = [
-//   '#type' => 'email',
+        //   '#type' => 'email',
 //     '#title' => $this
 //       ->t('Email'),
 //     '#default_value' => $creator_email[$holder_person_id],
 //     '#required' => true
 //     //'#disabled' => true,
-//   ];
+        //   ];
 //         $form['dataset']['rights_holder']['person']['federatedid'] = [
 //       '#type' => 'textfield',
 //         '#title' => $this
@@ -1144,24 +1302,22 @@ $form['dataset']['depositor'][$i]['uploader'] = [
 //           '#required' => true
 //           //'#disabled' => true,
 //       ];
-if(isset($metadata['institution'])) {
-  $exp = '/([\w\s]+)/';
-  preg_match_all($exp, $metadata['institution'], $matches);
-  $longname = $matches[0][0];
-  $shortname = isset($matches[0][1]) ? $matches[0][1] : $matches[1][0];
-  \Drupal::logger('dataset_upload_match')->debug('<pre><code>' . print_r($matches, TRUE) . '</code></pre>');
-
-}
-else {
-        $shortname = '';
-        $longname = '';
-      }
+        if (isset($metadata['institution'])) {
+            $exp = '/([\w\s]+)/';
+            preg_match_all($exp, $metadata['institution'], $matches);
+            $longname = trim($matches[0][0]);
+            $shortname = isset($matches[0][1]) ? $matches[0][1] : $matches[1][0];
+        //\Drupal::logger('dataset_upload_match')->debug('<pre><code>' . print_r($matches, true) . '</code></pre>');
+        } else {
+            $shortname = '';
+            $longname = '';
+        }
 
         $form['dataset']['rights_holder']['holder']['longname'] = [
 '#type' => 'textfield',
 '#title' => $this
   ->t('Long name'),
-  '#default_value' => $longname, //Extract from metadata
+  '#default_value' => rtrim($longname), //Extract from metadata
   '#required' => true
   //'#disabled' => true,
 ];
@@ -1170,7 +1326,7 @@ else {
 '#type' => 'textfield',
   '#title' => $this
     ->t('Short name'),
-    '#default_value' => $shortname, //Extract from metadata
+    '#default_value' => trim($shortname), //Extract from metadata
     //'#disabled' => true,
     '#required' => true
 ];
@@ -1204,12 +1360,13 @@ else {
 
         $creators = count($creator_types);
         $form_state->set('creator_count', $creators);
-        \Drupal::logger('dataset_upload')->debug('Num of creators: ' . $creators);
+        //\Drupal::logger('dataset_upload')->debug('Num of creators: ' . $creators);
         for ($i=0; $i<$creators; $i++) {
             if ($creator_types[$i] === 'person') {
                 $form['dataset']['creator'][$i]['creator'] = [
         '#type' => 'markup',
         '#markup' => '<strong>Person</strong>',
+        '#attributes' => ['class' => ['w3-card-2']],
       ];
                 $form['dataset']['creator'][$i]['creator']['firstname'] = [
 '#type' => 'textfield',
@@ -1242,12 +1399,11 @@ else {
             if ($creator_types[$i] === 'organization') {
                 $shortname = '';
                 $longname = '';
-                $words = str_word_count($creator_names[$i],0);
-                if ($words > 1) {
-                    $longname = $creator_names[$i];
-                } else {
-                    $shortname = $creator_names[$i];
-                }
+                $exp = '/([\w\s]+)/';
+                preg_match_all($exp, $creator_names[$i], $matches);
+                $longname = $matches[0][0];
+                $shortname = isset($matches[0][1]) ? $matches[0][1] : $matches[1][0];
+
                 $form['dataset']['creator'][$i]['creator'] = [
         '#type' => 'markup',
         '#markup' => '<strong>Organization</strong>',
@@ -1402,7 +1558,12 @@ else {
         'callback' => '::addSubjectCallback',
         'wrapper' => 'subject-wrapper',
       ],
-    //  '#limit_validation_errors' => array(),
+  '#limit_validation_errors' => [
+    ['dataset','subject','domain'],
+    ['dataset','subject','field'],
+    ['dataset','subject','subfield'],
+    ],
+    //  '#limit_validation['dataset','subject','domain'],_errors' => array(),
   );
         }
 
@@ -1427,6 +1588,7 @@ else {
   '#type' => 'submit',
   '#value' =>  $this->t('Cancel submission'),
   '#submit' => ['::cancelSubmission'],
+  '#limit_validation_errors' => [],
   );
 
         return $form;
@@ -1445,10 +1607,10 @@ else {
         //Call the validation function from the parent DatasetValidationForm
     $form_state->set('keep_file', 1); //do not delete uploaded dataset after compliance checker validation
     $form_state->set('tests', ['cf:1.6' => 1, 'acdd' => 1]); //Override the tests to be used in compliance checker
-      \Drupal::logger('dataset_upload')->debug('calling parent validate');
+      //\Drupal::logger('dataset_upload')->debug('calling parent validate');
         parent::validate($form, $form_state);
         \Drupal::logger('dataset_upload')->debug('finished parent validate');
-        \Drupal::logger('dataset_upload')->debug($form_state->get('int_status'));
+        //\Drupal::logger('dataset_upload')->debug($form_state->get('int_status'));
         //If dataset validation fails, redirect to form page 1.
         if ($form_state->get('int_status') > 0) {
             $form_state->set('page', 1);
@@ -1477,83 +1639,85 @@ else {
              * and store them in the $form_state
              */
 
-             //CONTRIBUTORS (DEPOSITORS)
-             if (isset($metadata['contributor_role'])) {
-                 $contributor_role = explode(', ', $metadata['contributor_role']);
-                 $form_state->set('contributor_role', $contributor_role);
-               }
-             if (isset($metadata['contributor_type'])) {
-                 $contributor_type = explode(', ', $metadata['contributor_type']);
-                 $form_state->set('contributor_type', $contributor_type);
-                 $contributor_type_count = array_count_values($contributor_type);
-                 \Drupal::logger('dataset_upload')->debug('contributor role <pre><code>' . print_r($contributor_role, true) . '</code></pre>');
-}
-                 if (isset($contributor_type_count['person'])) {
-                 $contributor_person_count = (int) $contributor_type_count['person'];
-                 $form_state->set('contributor_person_count', $contributor_person_count);
-
-               } else { $form_state->set('contributor_person_count', 1); }
-                 if (isset($contributor_type_count['organization'])) {
-                 $contributor_org_count = (int) $contributor_type_count['organization'];
-                 $form_state->set('contributor_org_count', $contributor_org_count);
-               }
-               else { $form_state->set('contributor_org_count', 0); }
-
-
-               if (isset($metadata['contributor_name'])) {
-                   $contributor_name = explode(', ', $metadata['contributor_name']);
-                   $form_state->set('contributor_name', $contributor_name);
-                 }
-
-             if (isset($metadata['contributor_email'])) {
-                 $contributor_email = explode(', ', $metadata['contributor_email']);
-                 $form_state->set('contributor_email', $contributor_email);
-               }
-               if (isset($metadata['contributor_url'])) {
-                   $contributor_url = explode(', ', $metadata['contributor_url']);
-                   $form_state->set('contributor_url', $contributor_url);
-                 }
-
-                 //CREATOR
-                 if (isset($metadata['creator_role'])) {
-                     $creator_role = explode(', ', $metadata['creator_role']);
-                     $form_state->set('creator_role', $creator_role);
-                   }
-                 if (isset($metadata['creator_type'])) {
-                     $creator_type = explode(', ', $metadata['creator_type']);
-                     $form_state->set('creator_type', $creator_type);
-                     $creator_type_count = array_count_values($creator_type);
-                     //\Drupal::logger('dataset_upload')->debug('depositor count <pre><code>' . print_r($depositor_type_count, true) . '</code></pre>');
-                     $creator_person_count = (int) $creator_type_count['person'];
-                     $creator_org_count = (int) $creator_type_count['organization'];
-                     $form_state->set('creator_person_count', $creator_person_count);
-                     $form_state->set('creator_org_count', $creator_org_count);
-                   }
-                   if (isset($metadata['creator_name'])) {
-                       $creator_name = explode(', ', $metadata['creator_name']);
-                       $form_state->set('creator_name', $creator_name);
-                     }
-
-                 if (isset($metadata['creator_email'])) {
-                     $creator_email = explode(', ', $metadata['creator_email']);
-                     $form_state->set('creator_email', $creator_email);
-                   }
-                   if (isset($metadata['creator_url'])) {
-                       $creator_url = explode(',', $metadata['creator_url']);
-                       $form_state->set('creator_url', $creator_url);
-                     }
-                     if (isset($metadata['creator_institution'])) {
-                         $creator_institution = explode(', ', $metadata['creator_institution']);
-                         $form_state->set('creator_institution', $creator_institution);
-                       }
+            //CONTRIBUTORS (DEPOSITORS)
+            if (isset($metadata['contributor_role'])) {
+                $contributor_role = explode(', ', $metadata['contributor_role']);
+                $form_state->set('contributor_role', $contributor_role);
+            }
+            if (isset($metadata['contributor_type'])) {
+                $contributor_type = explode(', ', $metadata['contributor_type']);
+                $form_state->set('contributor_type', $contributor_type);
+                $contributor_type_count = array_count_values($contributor_type);
+                //\Drupal::logger('dataset_upload')->debug('contributor role <pre><code>' . print_r($contributor_role, true) . '</code></pre>');
+            }
+            if (isset($contributor_type_count['person'])) {
+                $contributor_person_count = (int) $contributor_type_count['person'];
+                $form_state->set('contributor_person_count', $contributor_person_count);
+            } else {
+                $form_state->set('contributor_person_count', 1);
+            }
+            if (isset($contributor_type_count['organization'])) {
+                $contributor_org_count = (int) $contributor_type_count['organization'];
+                $form_state->set('contributor_org_count', $contributor_org_count);
+            } else {
+                $form_state->set('contributor_org_count', 0);
+            }
 
 
-//rightS HOLDER
-//if(isset($metadata['institution'])) {
-//  $exp = '/([\w\s]+)/'
-//  preg_match_all($exp, $metadata['institution'], $mateches);
-//  $form_state->set('rights_')
-//}
+            if (isset($metadata['contributor_name'])) {
+                $contributor_name = explode(', ', $metadata['contributor_name']);
+                $form_state->set('contributor_name', $contributor_name);
+            }
+
+            if (isset($metadata['contributor_email'])) {
+                $contributor_email = explode(', ', $metadata['contributor_email']);
+                $form_state->set('contributor_email', $contributor_email);
+            }
+            if (isset($metadata['contributor_url'])) {
+                $contributor_url = explode(', ', $metadata['contributor_url']);
+                $form_state->set('contributor_url', $contributor_url);
+            }
+
+            //CREATOR
+            if (isset($metadata['creator_role'])) {
+                $creator_role = explode(', ', $metadata['creator_role']);
+                $form_state->set('creator_role', $creator_role);
+            }
+            if (isset($metadata['creator_type'])) {
+                $creator_type = explode(', ', $metadata['creator_type']);
+                $form_state->set('creator_type', $creator_type);
+                $creator_type_count = array_count_values($creator_type);
+                //\Drupal::logger('dataset_upload')->debug('depositor count <pre><code>' . print_r($depositor_type_count, true) . '</code></pre>');
+                $creator_person_count = (int) $creator_type_count['person'];
+                $creator_org_count = (int) $creator_type_count['organization'];
+                $form_state->set('creator_person_count', $creator_person_count);
+                $form_state->set('creator_org_count', $creator_org_count);
+            }
+            if (isset($metadata['creator_name'])) {
+                $creator_name = explode(', ', $metadata['creator_name']);
+                $form_state->set('creator_name', $creator_name);
+            }
+
+            if (isset($metadata['creator_email'])) {
+                $creator_email = explode(', ', $metadata['creator_email']);
+                $form_state->set('creator_email', $creator_email);
+            }
+            if (isset($metadata['creator_url'])) {
+                $creator_url = explode(',', $metadata['creator_url']);
+                $form_state->set('creator_url', $creator_url);
+            }
+            if (isset($metadata['creator_institution'])) {
+                $creator_institution = explode(', ', $metadata['creator_institution']);
+                $form_state->set('creator_institution', $creator_institution);
+            }
+
+
+            //rightS HOLDER
+            //if(isset($metadata['institution'])) {
+            //  $exp = '/([\w\s]+)/'
+            //  preg_match_all($exp, $metadata['institution'], $mateches);
+            //  $form_state->set('rights_')
+            //}
 
 
             //dpm($metadata);
@@ -1634,8 +1798,8 @@ else {
         ];
                 }
             } */
-          }
-          $metadata = $md;
+            }
+            $metadata = $md;
         }
 
         /**
@@ -1669,6 +1833,33 @@ else {
     }
 
 
+    /**
+     * BUILD FORM PAGE 4
+     */
+
+    public function registrationConfirmedForm(array &$form, FormStateInterface $form_state)
+    {
+        $form['registration-message'] = [
+    '#type' => 'markup',
+    '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
+    '#markup' => '<span>Your dataset was succesfully registerd with id <strong>'.$form_state->get('dataset_id').'</strong>.</span>',
+    '#suffix' => '</div>',
+    '#allowed_tags' => ['div', 'span','strong'],
+  ];
+        $yaml = $form_state->get('yaml_file');
+        $form['services-yaml'] = [
+        '#type' => 'textarea',
+        '#title' => 'dataset services config yaml',
+        '#value' => Yaml::dump($yaml),
+      ];
+
+        $form['json'] = [
+      '#type' => 'textarea',
+      '#title' => 'Dataset registration summary as JSON object',
+      '#default_value' => $form_state->get('json'),
+    ];
+        return $form;
+    }
 
     /**
      * BUILD FORM PAGE 3
@@ -1679,6 +1870,16 @@ else {
         //  dpm('building form page 3...');
 
         //$metadata = $form_state->getValue('metadata');
+        //$form = self::formPageFive($form, $form_state);
+        $form['validation-message'] = [
+      '#type' => 'markup',
+      '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
+      '#markup' => '<span>Your dataset(s) is compliant with CF and ACDD standards. The submission can now proceed.</span>',
+      '#suffix' => '</div>',
+      '#allowed_tags' => ['div', 'span'],
+    ];
+
+
 
         $form['services'] = [
   '#type' => 'container',
@@ -1750,6 +1951,7 @@ else {
       '#type' => 'submit',
       '#value' => $this->t('Cancel submission'),
       '#submit' => ['::cancelSubmission'],
+      '#limit_validation_errors' => [],
       );
 
 
@@ -1779,10 +1981,10 @@ else {
         $form['nird_response'] = [
         '#type' => 'textarea',
         '#title' => 'NIRD API Response',
-        '#default_value' => $form_state->get('dataset_response'),
+        '#default_value' => $form_state->get('nird_error'),
       ];
 
-        $form = self::confirmServicesForm($form, $form_state);
+        //$form = self::confirmServicesForm($form, $form_state);
         return $form;
     }
 
@@ -1807,12 +2009,12 @@ else {
         $dataset = $form_state->getValues()['dataset'];
         $dataset['subject'] =  $form_state->get('subjects_added');
         $depositors = count($dataset['depositor']);
-        \Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $depositors);
+        //\Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $depositors);
         $creators = count($dataset['creator']);
-        \Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $creators);
-        \Drupal::logger('dataset_upload_validate_dataset')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $creators);
+        //\Drupal::logger('dataset_upload_validate_dataset')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
 
-        if ($form_state->has('page') && $form_state->get('page') == 2) {
+        if ($form_state->has('page') && $form_state->get('page') == 5) {
             /**
              * Validate depositor using Find Person API Callback
              */
@@ -1861,10 +2063,10 @@ else {
                 \Drupal::logger('dataset_upload')->debug('data_manger registered');
             }
 
-    /*        $json = [
-       'person' => $dataset['rights_holder']['person'],
-       'organization' => $dataset['rights_holder']['holder'],
-     ];*/
+            /*        $json = [
+               'person' => $dataset['rights_holder']['person'],
+               'organization' => $dataset['rights_holder']['holder'],
+             ];*/
             $rights_holder = $this->nirdApiClient->findOrganization(
                 $dataset['rights_holder']['holder']['longname'],
                 $dataset['rights_holder']['holder']['shortname'],
@@ -1875,7 +2077,7 @@ else {
 
             if (!(bool) $rights_holder['registered']) {
                 \Drupal::logger('dataset_upload')->error('rights_holder not registered...trying to register.');
-                //$form_state->setErrorByName('dataset][data_manager][manager',"Data manager not registered");
+            //$form_state->setErrorByName('dataset][data_manager][manager',"Data manager not registered");
           /*      $holder_person = $this->nirdApiClient->findPerson(
                     $dataset['rights_holder']['person']['firstname'],
                     $dataset['rights_holder']['person']['lastname'],
@@ -1942,8 +2144,8 @@ else {
    */
     public function submitForm(array &$form, FormStateInterface $form_state)
     {
-        \Drupal::messenger()->addMessage(t("Confirm final. Contact NIRD API and upload."));
-        $form_state->set('page', 5);
+        //\Drupal::messenger()->addMessage(t("Confirm final. Contact NIRD API and upload."));
+        $form_state->set('page', 6);
 
         //Check services selected and create services config file.
         $session = \Drupal::request()->getSession();
@@ -1957,7 +2159,7 @@ else {
          * Modify array of form values and encode to json for
          * the create dataset api call
          */
-
+        unset($dataset['message']);
         $category = $dataset['category'];
         $lang = $dataset['language'];
         $licence = $dataset['licence'];
@@ -1974,11 +2176,22 @@ else {
         unset($dataset['rights_holder']['person']);
         $holder = $dataset['rights_holder'];
         //$published = (int) $article['publication']['published'];
-        $published = (int) $form_state->getValue(['dataset']['publication']['published']);
-        if ($published === 1) {
-            $article['publication']['published'] = true;
+        $published  = $form_state->getValue(['dataset','article','publication','article-select']);
+        //dpm($published);
+        if ($published === 'published') {
+            unset($article['publication']['article-select']);
+            unset($article['publication']['no_publication']);
+            $article['publication'] = [
+              'published' => true,
+              'reference' => $article['publication']['published']['reference'],
+            ];
         } else {
-            $article['publication']['published'] = false;
+            unset($article['publication']['article-select']);
+            unset($article['publication']['published']);
+            $article['publication'] = [
+            'no_publication' => true,
+            'motivation' => $article['publication']['no_publication']['motivation'],
+          ];
         }
         //Datamanger
         $manager = $dataset['data_manager'];
@@ -1989,27 +2202,27 @@ else {
         if(isset($manager['manager']['person'])) {
           $dm_person = $manager['manager']['person'];
 */
-        if (isset($manager['manager'])) {
-            $dm_person = $manager['manager'];
+        /*    if (isset($manager['manager'])) {
+                $dm_person = $manager['manager'];
 
-            foreach ($dm_person as $p) {
-                $obj = (object) [
-            'manager' => $p
-          ];
-                array_push($manager_new, $obj);
+                foreach ($dm_person as $p) {
+                    $obj = (object) [
+                'manager' => $p
+              ];
+                    array_push($manager_new, $obj);
+                }
             }
-        }
 
-        if (isset($manager['manager']['organization'])) {
-            $dm_org = $manager['manager']['organization'];
+            if (isset($manager['manager']['organization'])) {
+                $dm_org = $manager['manager']['organization'];
 
-            foreach ($dm_org as $o) {
-                $obj = (object) [
-            'manager' => $o
-          ];
-                array_push($manager_new, $obj);
-            }
-        }
+                foreach ($dm_org as $o) {
+                    $obj = (object) [
+                'manager' => $o
+              ];
+                    array_push($manager_new, $obj);
+                }
+            }*/
         //Rights holder
         //$holder = [];
         //array_push($holder,$dataset['rights_holder']['holder']['person']);
@@ -2056,7 +2269,7 @@ else {
 
 
 
-        $dataset['data_manager'] = $manager; //_new;
+        //$dataset['data_manager'] = $manager; //_new;
 
         $dataset['rights_holder'] = $holder;
         //  'holder' =>$h
@@ -2075,8 +2288,8 @@ else {
         $json = Json::encode($dataset);
         $form_state->set('json', $json);
         //\Drupal::logger('dataset_upload')->debug($json);
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r(Json::encode($json), true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r(Json::encode($json), true) . '</code></pre>');
 
 
         \Drupal::logger('dataset_upload_dataset_after')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
@@ -2090,8 +2303,21 @@ else {
         $form_state->set('dataset_response', Json::encode($result));
         $form_state->set('dataset', $dataset);
         //Store the given dataset_id for success
-        $form_state->set('dataset_id', $result['dataset_id']);
 
+        if (isset($result['dataset_id'])) {
+            $form_state->set('dataset_id', $result['dataset_id']);
+            $yaml = [
+              'services' => $form_state->get('yaml_services'),
+              'dataset' => [
+                'name' => $result['dataset_id'],
+              ],
+            ];
+            $form_state->set('yaml_file', $yaml);
+            $session->set('dataset_upload_status', 'registered');
+        }
+        if (isset($result['error'])) {
+            $form_state->set('nird_error', $result['error']);
+        }
         $form_state->setRebuild();
     }
 
@@ -2145,8 +2371,9 @@ else {
                 $file->delete();
             }
         }
-        $filesystem->deleteRecursive($upload_path . $user_id . '/' . $session_id);
-
+        //$filesystem->deleteRecursive($upload_path . $user_id . '/' . $session_id);
+        $filesystem->deleteRecursive($form_state->get('upload_location'));
+        /*
         $is_empty = function (string $folder): bool {
             if (!file_exists($folder)) {
                 return true;
@@ -2161,7 +2388,7 @@ else {
 
         if ($is_empty($upload_path . $user_id)) {
             $filesystem->deleteRecursive($upload_path . $user_id);
-        }
+        }*/
         $session->remove('nird_upload_path');
         $session->remove('current_upload_uuid');
         //$session->remove('nird_fail_message');
@@ -2263,7 +2490,9 @@ else {
     {
         \Drupal::messenger()->addMessage(t("Confirm services form action."));
         //Check services selected and create services config file.
-        $form_state->set('page', 4);
+        $form_state->set('page', 5);
+
+
         $session = \Drupal::request()->getSession();
         $upload_path = $session->get('nird_upload_path');
         $user_id = $this->currentUser->id();
@@ -2280,6 +2509,20 @@ else {
 
         //dpm($dataset_type);
         //dpm($selected_checkboxes);
+        $services = [];
+        if ($selected_checkboxes['https'] !== 0) {
+            $services[] = 'http';
+        }
+        if ($selected_checkboxes['opendap'] !== 0) {
+            $services[] = 'opendap';
+        }
+        if ($selected_checkboxes['wms'] !== 0) {
+            $services[] = 'wms';
+        }
+        //dpm($services);
+
+        $form_state->set('yaml_services', $services);
+        /*
         $contents = '';
         if ($selected_checkboxes['https'] !== 0) {
             $contents = '<thredds:service name="file" serviceType="HTTPServer" base="/opendap/hyrax/">';
@@ -2298,7 +2541,7 @@ else {
         $cfg_file->save();
         \Drupal::messenger()->addMessage(t("Created servies config file with fid: " .$cfg_file->id()));
         $session->set('services_config_fid', $cfg_file->id());
-
+        */
 
 
 
@@ -2328,6 +2571,44 @@ else {
      }*/
 
         $form_state->setRebuild();
+    }
+
+    public function publicationSelectCallback(array &$form, FormStateInterface $form_state)
+    {
+        $response = new AjaxResponse();
+
+        $published = $form_state->getValue(['dataset', 'article', 'publication', 'select']);
+        //\Drupal::logger('dataset_upload')->debug('published?: ' .$published);
+        if ($published) {
+            /*    $form['dataset']['article']['publication']['published'] = [
+                '#type' => 'hidden',
+                '#value' => true,
+                //'#pefix' => '<div id="published">',
+                //'#suffix' => '</div>',
+              ];*/
+            $form['dataset']['article']['publication']['published']['reference']['doi'] = [
+    '#type' => 'textfield',
+    '#title' =>  $this->t('DOI reference'),
+    '#required' => true,
+  ];
+            //$form_state->set('has_publication', $form['dataset']['article']['publication']['published']['reference']['doi']);
+            $response->addCommand(new ReplaceCommand('#publication-wrapper', $form['dataset']['article']['publication']));
+            return $form['dataset']['article']['publication'];
+        } else {
+            /*$form['dataset']['article']['publication']['no_publication'] = [
+    '#type' => 'hidden',
+    '#value' => false,
+  ];*/
+            $form['dataset']['article']['publication']['no_publication']['motivation'] = [
+'#type' => 'textfield',
+'#title' =>  $this->t('Motivation'),
+'#required' => true,
+];
+            //$form_state->set('no_publication', $form['dataset']['article']['publication']['no_publication']['motivation']);
+            $response->addCommand(new ReplaceCommand('#publication-wrapper', $form['dataset']['article']['publication']));
+            return $form['dataset']['article']['publication'];
+        }
+        //return $form['dataset']['article']['publication'];
     }
 
 
@@ -2452,8 +2733,8 @@ else {
     {
         //$response = new AjaxResponse();
         $persons = 0;
-        if($form_state->has('added_depositor_persons')) {
-          $persons = $form_state->get('added_depositor_persons');
+        if ($form_state->has('added_depositor_persons')) {
+            $persons = $form_state->get('added_depositor_persons');
         }
         //  if (empty($num_articles)) {
 
@@ -2493,9 +2774,9 @@ else {
     {
         //$response = new AjaxResponse();
         $orgs = 0;
-        if($form_state->has('added_depositor_orgs')) {
-        $orgs = $form_state->get('added_depositor_orgs');
-        //  if (empty($num_articles)) {
+        if ($form_state->has('added_depositor_orgs')) {
+            $orgs = $form_state->get('added_depositor_orgs');
+            //  if (empty($num_articles)) {
         }
         //  }
         //\Drupal::logger('nordatanet_nird')->debug("number of articles before: " . $num_articles);
