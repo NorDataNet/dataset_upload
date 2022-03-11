@@ -23,7 +23,8 @@ use Drupal\Component\Serialization\Json;
 use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-use Symfony\Component\Yaml\Yaml;
+//use Symfony\Component\Yaml\Yaml;
+use Drupal\Core\Serialization\Yaml;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\AppendCommand;
@@ -428,7 +429,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
 
         $licences = $form_state->get('api_licences');
-        $licence = array_column($licences, 'name');
+        $licence = array_column($licences, 'id');
         $licence_name = array_column($licences, 'name');
         /*  foreach($lics as $lic ) {
           $licence[] = $licences['licence'];
@@ -1850,7 +1851,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['services-yaml'] = [
         '#type' => 'textarea',
         '#title' => 'dataset services config yaml',
-        '#value' => Yaml::dump($yaml),
+        '#value' => Yaml::encode($yaml),
       ];
 
         $form['json'] = [
@@ -2165,12 +2166,12 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $licence = $dataset['licence'];
 
         //Override licence for testing.
-        $licence = [
-          'name' => 'Norwegian Licence for Open Government Data (NLOD)',
-          'archive' => 'http://data.norge.no/nlod/en/1.0',
-          'access' => 'http://data.norge.no/nlod/en/1.0',
-        ];
-
+        /*  $licence = [
+            'name' => 'Norwegian Licence for Open Government Data (NLOD)',
+            'archive' => 'http://data.norge.no/nlod/en/1.0',
+            'access' => 'http://data.norge.no/nlod/en/1.0',
+          ];
+*/
         $article = $dataset['article'];
         $depositor = $dataset['depositor'];
         unset($dataset['rights_holder']['person']);
@@ -2259,7 +2260,9 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         ]];
 
 
-        $dataset['licence'] = $licence;
+        $dataset['licence'] = [
+          'id' => $licence,
+        ];
         //    'id' => $licence,
         //  ];
         $dataset['article'] = [
@@ -2312,6 +2315,18 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 'name' => $result['dataset_id'],
               ],
             ];
+            $output_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
+            $yaml_filepath = $output_path.'/'. $result['dataset_id'] . '.yml';
+            //dpm($output_path);
+            //dpm($yaml_file);
+            //$yaml_file = fopen($yaml_filepath, 'w');
+            //fwrite($yaml_file, Yaml::dump($yaml));
+            //fwrite($yaml_file, $yaml);
+            //fclose($yaml_file);
+            $yml = Yaml::encode($yaml);
+            file_put_contents($yaml_filepath, $yml, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+            //$yaml_file = file_save_data(Yaml::dump($yaml), $yaml_filepath, FileSystemInterface::EXISTS_REPLACE);
+            //$yaml_file->save();
             $form_state->set('yaml_file', $yaml);
             $session->set('dataset_upload_status', 'registered');
         }
