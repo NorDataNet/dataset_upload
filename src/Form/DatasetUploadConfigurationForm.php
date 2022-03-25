@@ -303,10 +303,12 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_organization_endpoint', $values['nird_api_organization_endpoint'])
       ->set('nird_api_dataset_status_endpoint', $values['nird_api_dataset_status_endpoint'])
       ->set('nird_api_landing_page_endpoint', $values['nird_api_landing_page_endpoint'])
+      /*
       ->set('data_manager_longname', $values['data_manager']['longname'])
       ->set('data_manager_shortname', $values['data_manager']['shortname'])
       ->set('data_manager_contactemail', $values['data_manager']['contactemail'])
       ->set('data_manager_homepage', $values['data_manager']['homepage'])
+      */
       ->set('helptext_upload', $values['helptext-upload'])
       ->set('helptext_dataset', $values['helptext-dataset'])
       ->save();
