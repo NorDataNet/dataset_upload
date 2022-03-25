@@ -160,7 +160,17 @@ class DatasetUploadForm extends DatasetValidationForm
 
         //Get the config of the module
         $config = self::config('dataset_upload.settings');
+        $user = \Drupal\user\Entity\User::load($this->currentUser->id());
         //dpm('buildForm');
+
+        /**
+         * Check if the logged in user have registered all user fields including
+         * custom user fields required for the depositor.
+         * If the fields are null or empty string, redirect to user form
+         * for filling out those fields.
+         */
+
+
         /**
          * Test witch step/form page we are on, and call the corresponding buildForm
          * function for that step/page

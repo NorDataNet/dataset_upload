@@ -14,11 +14,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class NirdApiClient implements NirdApiClientInterface
 {
-  /**
-   * Config factory.
-   *
-   * @var \Drupal\Core\Config\ImmutableConfig
-   */
+    /**
+     * Config factory.
+     *
+     * @var \Drupal\Core\Config\ImmutableConfig
+     */
     private $config;
 
     /**
@@ -64,14 +64,14 @@ class NirdApiClient implements NirdApiClientInterface
         $this->json = $json;
     }
 
-/**
-  * {@inheritdoc}
-  */
-public static function create(ContainerInterface $container)
-{
-    $this->httpClient = $container->get('http_client');
-    return $this;
-}
+    /**
+      * {@inheritdoc}
+      */
+    public static function create(ContainerInterface $container)
+    {
+        $this->httpClient = $container->get('http_client');
+        return $this;
+    }
 
     /**
      * {@inheritDoc}
@@ -88,7 +88,7 @@ public static function create(ContainerInterface $container)
         //$response = \Drupal::httpClient()->post(
           //$endpoint,
         $this->config->get('nird_api_token_endpoint'),
-          [
+            [
        'form_params' => [
            'grant_type' => $grant_type,
            'username' => $username,
@@ -104,7 +104,8 @@ public static function create(ContainerInterface $container)
           'Accept' => 'application/json',
        ],
 
-      ]);
+      ]
+        );
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
@@ -114,29 +115,30 @@ public static function create(ContainerInterface $container)
             //Add the authentication token to the httpclient default header for future requests by this client
 
             //$this->httpClient = $this->httpClient->fromOptions($options);
+        }
     }
-  }
 
     /**
      * {@inheritDoc}
      */
     public function getState(): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_state_endpoint'), [
+            $this->config->get('nird_api_state_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'headers' => [
             'Authorization' => "{$this->token_type} {$this->token}",
@@ -160,21 +162,22 @@ public static function create(ContainerInterface $container)
      */
     public function getCategory(): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_category_endpoint'), [
+            $this->config->get('nird_api_category_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'headers' => [
             'Authorization' => "{$this->token_type} {$this->token}",
@@ -198,21 +201,22 @@ public static function create(ContainerInterface $container)
      */
     public function getSubject(string $domain = '', string $field = '', string $subfield = ''): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_subject_endpoint'), [
+            $this->config->get('nird_api_subject_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'query' => [
             'domain' => $domain,
@@ -240,21 +244,22 @@ public static function create(ContainerInterface $container)
      */
     public function getDomain(): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_domain_endpoint'), [
+            $this->config->get('nird_api_domain_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'headers' => [
             'Authorization' => "{$this->token_type} {$this->token}",
@@ -277,21 +282,22 @@ public static function create(ContainerInterface $container)
      */
     public function getField(string $domain = ''): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_field_endpoint'), [
+            $this->config->get('nird_api_field_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'query' => [
             'domain' => $domain,
@@ -317,21 +323,22 @@ public static function create(ContainerInterface $container)
      */
     public function getSubField(string $domain = '', string $field = ''): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_subfield_endpoint'), [
+            $this->config->get('nird_api_subfield_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'query' => [
             'domain' => $domain,
@@ -358,20 +365,21 @@ public static function create(ContainerInterface $container)
      */
     public function getLicence(string $name = ''): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_license_endpoint'), [
+            $this->config->get('nird_api_license_endpoint'),
+            [
         'base_uri' => $this->config->get('nird_api_base_uri'),
         'query' => [
           'name' => $name,
@@ -382,7 +390,7 @@ public static function create(ContainerInterface $container)
           'Accept' => 'application/json',
         ],
       ],
-      );
+        );
 
 
         if ($response->getStatusCode() === 200) {
@@ -401,26 +409,26 @@ public static function create(ContainerInterface $container)
 
     public function createDataset(array $dataset): array
     {
-
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
         $json = $this->json::encode($dataset);
 
         //var_dump($json);
         $endpoint = $this->config->get('nird_api_dataset_endpoint');
-try {
-        $response = $this->httpClient->post(
-
-        $this->config->get('nird_api_dataset_endpoint'), [
+        try {
+            $response = $this->httpClient->post(
+                $this->config->get('nird_api_dataset_endpoint'),
+                [
         'base_uri' => $this->config->get('nird_api_base_uri'),
         'json' => $dataset,
         'http_erros' => false,
@@ -430,26 +438,24 @@ try {
           'Accept' => 'application/json',
         ],
       ]
-    );
+            );
 
-    if ($response->getStatusCode() === 200) {
-        $contents = $this->json::decode($response->getBody()->getContents());
-        return $contents;
-    }
-}
-    catch(\GuzzleHttp\Exception\RequestException $e){
-   // you can catch here 400 response errors and 500 response errors
-   // You can either use logs here use Illuminate\Support\Facades\Log;
-   $error['error'] = $e->getMessage();
-   $error['request'] = $e->getRequest();
-   return $error;
-   \Drupal::logger('dataset_upload')->error('Error occurred in get request.', ['error' => $error]);
-}catch(Exception $e){
-  $error['error'] = $e->getMessage();
-  $error['request'] = $e->getRequest();
-  return $error;
-
-}
+            if ($response->getStatusCode() === 200) {
+                $contents = $this->json::decode($response->getBody()->getContents());
+                return $contents;
+            }
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            // you can catch here 400 response errors and 500 response errors
+            // You can either use logs here use Illuminate\Support\Facades\Log;
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+            \Drupal::logger('dataset_upload')->error('Error occurred in get request.', ['error' => $error]);
+        } catch (Exception $e) {
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+        }
 
 
 
@@ -460,26 +466,27 @@ try {
      * {@inheritDoc}
      */
     public function findPerson(
-      string $firstname = '',
-      string $lastname = '',
-      string $email = '',
-      string $federatedid = ''): array
-    {
-
+        string $firstname = '',
+        string $lastname = '',
+        string $email = '',
+        string $federatedid = ''
+    ): array {
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_person_endpoint'), [
+            $this->config->get('nird_api_person_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'query' => [
             'firstname' => $firstname,
@@ -506,25 +513,27 @@ try {
     }
 
     public function findOrganization(
-      string $longname = '',
-      string $shortname = '',
-      string $contactemail = '',
-      string $homepage = ''): array
-      {
+        string $longname = '',
+        string $shortname = '',
+        string $contactemail = '',
+        string $homepage = ''
+    ): array {
         if (empty($this->token)) {
-          $user = $this->config->get('nird_username');
-          $pass = $this->config->get('nird_password');
-            self::getToken('',
-            $user,
-            $pass,
-            '',
-            '',
-            ''
-        );
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
         }
 
         $response = $this->httpClient->get(
-          $this->config->get('nird_api_organization_endpoint'), [
+            $this->config->get('nird_api_organization_endpoint'),
+            [
           'base_uri' => $this->config->get('nird_api_base_uri'),
           'query' => [
             'longname' => $longname,
@@ -547,33 +556,34 @@ try {
         }
 
         return [];
-      }
+    }
 
 
-      /**
-       * {@inheritDoc}
-       */
-      public function createPerson(
+    /**
+     * {@inheritDoc}
+     */
+    public function createPerson(
         string $firstname = '',
         string $lastname = '',
         string $email = '',
-        string $federatedid = ''): array
-      {
-
-          if (empty($this->token)) {
+        string $federatedid = ''
+    ): array {
+        if (empty($this->token)) {
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
-              self::getToken('',
-              $user,
-              $pass,
-              '',
-              '',
-              ''
-          );
-          }
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
 
-          $response = $this->httpClient->post(
-            $this->config->get('nird_api_person_endpoint'), [
+        $response = $this->httpClient->post(
+            $this->config->get('nird_api_person_endpoint'),
+            [
             'base_uri' => $this->config->get('nird_api_base_uri'),
             'json' =>
             [
@@ -589,35 +599,37 @@ try {
               'Accept' => 'application/json',
             ],
           ],
-          );
-          //dpm($response->getStatusCode());
-          if ($response->getStatusCode() === 200) {
-              $contents = $this->json::decode($response->getBody()->getContents());
-              //$msg = $this->json::decode($contents);
-              //dpm($contents);
-              return $contents;
-          }
+        );
+        //dpm($response->getStatusCode());
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            //$msg = $this->json::decode($contents);
+            //dpm($contents);
+            return $contents;
+        }
 
-          return [];
-      }
+        return [];
+    }
 
-      public function createOrganization(
-        array $json = []): array
-        {
-          if (empty($this->token)) {
+    public function createOrganization(
+        array $json = []
+    ): array {
+        if (empty($this->token)) {
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
-              self::getToken('',
-              $user,
-              $pass,
-              '',
-              '',
-              ''
-          );
-          }
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
 
-          $response = $this->httpClient->post(
-            $this->config->get('nird_api_organization_endpoint'), [
+        $response = $this->httpClient->post(
+            $this->config->get('nird_api_organization_endpoint'),
+            [
             'base_uri' => $this->config->get('nird_api_base_uri'),
             'json' => $json,
             'http_erros' => false,
@@ -633,15 +645,90 @@ try {
               'Accept' => 'application/json',
             ],
           ],
-          );
-          //dpm($response->getStatusCode());
-          if ($response->getStatusCode() === 200) {
-              $contents = $this->json::decode($response->getBody()->getContents());
-              //$msg = $this->json::decode($contents);
-              return $contents;
-          }
-
-          return [];
+        );
+        //dpm($response->getStatusCode());
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            //$msg = $this->json::decode($contents);
+            return $contents;
         }
 
+        return [];
+    }
+
+    public function getDatasetStatus(string $dataset_id = ''): array
+    {
+        if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
+
+        $response = $this->httpClient->get(
+            $this->config->get('nird_api_dataset_status_endpoint'),
+            [
+              'base_uri' => $this->config->get('nird_api_base_uri'),
+              'query' => [
+                'dataset_id' => $dataset_id,
+              ],
+              'headers' => [
+                'Authorization' => "{$this->token_type} {$this->token}",
+                'Content-Type' => "application/json",
+                'Accept' => 'application/json',
+              ],
+            ],
+        );
+
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            return $this->json::decode($contents);
+        }
+
+        return [];
+    }
+
+    public function getDatasetLandingPage(string $doi = ''): array
+    {
+        if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
+
+        $response = $this->httpClient->get(
+            $this->config->get('nird_api_dataset_landing_page_endpoint'),
+            [
+              'base_uri' => $this->config->get('nird_api_base_uri'),
+              'query' => [
+                'dataset_id' => $doi,
+              ],
+              'headers' => [
+                'Authorization' => "{$this->token_type} {$this->token}",
+                'Content-Type' => "application/json",
+                'Accept' => 'application/json',
+              ],
+            ],
+        );
+
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            return $this->json::decode($contents);
+        }
+
+        return [];
+    }
 }

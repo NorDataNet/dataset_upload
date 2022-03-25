@@ -171,46 +171,59 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
           '#size' => 35,
         ];
 
-
-        $form['data_manager'] = [
-
-        '#type' => 'fieldset',
-        '#title' => t('Default data manager organization'),
-        '#description' => t('Fill out the default data manager organization for the upload form. This info will be used to prefill the data manager organization.'),
-        '#tree' => true,
-      ];
-
-
-        $form['data_manager']['longname'] = [
-    '#type' => 'textfield',
-      '#title' => $this
-        ->t('Long name'),
-        '#default_value' => $config->get('data_manager_longname'),
-        //'#disabled' => true,
-    ];
-
-        $form['data_manager']['shortname'] = [
-      '#type' => 'textfield',
-        '#title' => $this
-          ->t('Short name'),
-          '#default_value' => $config->get('data_manager_shortname'),
-          //'#disabled' => true,
-      ];
-        $form['data_manager']['contactemail'] = [
-        '#type' => 'email',
-          '#title' => $this
-            ->t('Contact email'),
-            '#default_value' => $config->get('data_manager_contactemail'),
-            //'#disabled' => true,
+        $form['api']['nird_api_dataset_status_endpoint'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('NIRD API Dataset status endpoint'),
+            '#default_value' => $config->get('nird_api_dataset_status_endpoint'),
+          '#size' => 35,
         ];
-        $form['data_manager']['homepage'] = [
-            '#type' => 'url',
+
+        $form['api']['nird_api_landing_page_endpoint'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('NIRD API Dataset landing page endpoint'),
+            '#default_value' => $config->get('nird_api_landing_page_endpoint'),
+          '#size' => 35,
+        ];
+        /*
+                $form['data_manager'] = [
+
+                '#type' => 'fieldset',
+                '#title' => t('Default data manager organization'),
+                '#description' => t('Fill out the default data manager organization for the upload form. This info will be used to prefill the data manager organization.'),
+                '#tree' => true,
+              ];
+
+
+                $form['data_manager']['longname'] = [
+            '#type' => 'textfield',
               '#title' => $this
-                ->t('Homepage'),
-                '#default_value' => $config->get('data_manager_homepage'),
-              //  '#disabled' => true,
+                ->t('Long name'),
+                '#default_value' => $config->get('data_manager_longname'),
+                //'#disabled' => true,
             ];
 
+                $form['data_manager']['shortname'] = [
+              '#type' => 'textfield',
+                '#title' => $this
+                  ->t('Short name'),
+                  '#default_value' => $config->get('data_manager_shortname'),
+                  //'#disabled' => true,
+              ];
+                $form['data_manager']['contactemail'] = [
+                '#type' => 'email',
+                  '#title' => $this
+                    ->t('Contact email'),
+                    '#default_value' => $config->get('data_manager_contactemail'),
+                    //'#disabled' => true,
+                ];
+                $form['data_manager']['homepage'] = [
+                    '#type' => 'url',
+                      '#title' => $this
+                        ->t('Homepage'),
+                        '#default_value' => $config->get('data_manager_homepage'),
+                      //  '#disabled' => true,
+                    ];
+        */
         $form['helptext-wrapper'] = [
           '#type' => 'fieldset',
           '#title' => $this->t('Helptext and instruction'),
@@ -223,7 +236,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
             '#format'        => $config->get('helptext_upload')['format'],
             '#default_value' => $config->get('helptext_upload')['value'],
           ];
-          $form['helptext-wrapper']['helptext-dataset'] = [
+        $form['helptext-wrapper']['helptext-dataset'] = [
               '#type'          => 'text_format',
               '#title'         => $this->t('Dataset creation form instructions'),
               '#description' => $this->t('Enter instructions to be shown when filling out the dataset information form.'),
@@ -242,10 +255,10 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
      */
     public function validateForm(array &$form, FormStateInterface $form_state)
     {
-      /**
-       * TODO: Add a test against NIRD API when saving the config, to check wheter
-       * username and password are valid, and client can connect to the NIRD API.
-       */
+        /**
+         * TODO: Add a test against NIRD API when saving the config, to check wheter
+         * username and password are valid, and client can connect to the NIRD API.
+         */
 
         return parent::validateForm($form, $form_state);
     }
@@ -259,12 +272,23 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
     /**
      * Save the configuration
     */
+        $config = $this->config('dataset_upload.settings');
         $values = $form_state->getValues();
         //dpm($values);
 
+        $current_pass = $config->get('nird_password');
+        $form_pass = $values['password'];
+
+        if ($form_pass === '' && $current_pass !== '') {
+            $newPass = $current_pass;
+        } else {
+            $newPass = $form_pass;
+        }
+
         $this->configFactory->getEditable('dataset_upload.settings')
       ->set('nird_username', $values['username'])
-      ->set('nird_password', $values['password'])
+      ->set('nird_password', $newPass)
+      //->set('nird_password', $values['password'])
       ->set('nird_api_base_uri', $values['nird_api_base_uri'])
       ->set('nird_api_token_endpoint', $values['nird_api_token_endpoint'])
       ->set('nird_api_dataset_endpoint', $values['nird_api_dataset_endpoint'])
@@ -277,6 +301,8 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_category_endpoint', $values['nird_api_category_endpoint'])
       ->set('nird_api_person_endpoint', $values['nird_api_person_endpoint'])
       ->set('nird_api_organization_endpoint', $values['nird_api_organization_endpoint'])
+      ->set('nird_api_dataset_status_endpoint', $values['nird_api_dataset_status_endpoint'])
+      ->set('nird_api_landing_page_endpoint', $values['nird_api_landing_page_endpoint'])
       ->set('data_manager_longname', $values['data_manager']['longname'])
       ->set('data_manager_shortname', $values['data_manager']['shortname'])
       ->set('data_manager_contactemail', $values['data_manager']['contactemail'])
