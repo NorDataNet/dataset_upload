@@ -161,7 +161,12 @@ class DatasetUploadForm extends DatasetValidationForm
         //Get the config of the module
         $config = self::config('dataset_upload.settings');
         $user = \Drupal\user\Entity\User::load($this->currentUser->id());
-        //dpm('buildForm');
+
+        /**
+         * TODO: Check if user have all the fields filled out.
+         *       if not, redirect to user edit form
+         */
+
 
         /**
          * Check if the logged in user have registered all user fields including
@@ -192,12 +197,13 @@ class DatasetUploadForm extends DatasetValidationForm
 
         if ($form_state->has('page') && $form_state->get('page') == 2) {
             //dpm('building dataset form');
+
             return self::confirmServicesForm($form, $form_state);
             //return self::buildDatasetForm($form, $form_state);
         }
 
         if ($form_state->has('page') && $form_state->get('page') == 3) {
-            return self::formPageThree($form, $form_state);
+            return self::confirmAggregationForm($form, $form_state);
         }
 
         if ($form_state->has('page') && $form_state->get('page') == 4) {
@@ -210,13 +216,13 @@ class DatasetUploadForm extends DatasetValidationForm
         if ($form_state->has('page') && $form_state->get('page') == 6) {
 
             //Cleanup now during development,
-            $this->cleanUp($this->currentUser->id(), $form_state);
+            //$this->cleanUp($this->currentUser->id(), $form_state);
             return self::registrationConfirmedForm($form, $form_state);
             //return self::confirmServicesForm($form, $form_state);
         }
         if ($session->has('dataset_upload_status')) {
             $status = $session->get('dataset_upload_status');
-            if ($status !== 'confirmed') {
+            if ($status !== 'registered') {
                 \Drupal::logger('dataset_upload')->debug("Unsubmitted form found...cleaning up userid: " . $this->currentUser->id());
                 $this->cleanUp($this->currentUser->id(), $form_state);
             }
@@ -227,7 +233,7 @@ class DatasetUploadForm extends DatasetValidationForm
         //  dpm('building form page 1...');
         //dpm('buildeing parent form');
         //Get the upload valitation form
-        $form_state->set('upload_basepath', 'public://dataset_upload_folder/');
+        $form_state->set('upload_basepath', 'private://dataset_upload_folder/');
         $form = parent::buildForm($form, $form_state);
         $form['container']['creation']['test'] = []; //[
 
@@ -363,7 +369,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
   '#default_value' => isset($metadata['title']) ? $metadata['title'] : '', //$prefill[' title'],
   '#size' => 120,
   '#required' => true,
-  '#disabled' => true,
+  '#disabled' => isset($metadata['title']),
   ];
 
         /**
@@ -377,7 +383,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
   '#value' => isset($metadata['summary']) ? $metadata['summary'] : '', //$prefill[' abstract'],
   '#size' => 120,
   '#required' => true,
-  '#disabled' => true,
+  '#disabled' => isset($metadata['summary']),
   ];
 
         /**
@@ -1620,7 +1626,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
     $form_state->set('tests', ['cf:1.6' => 1, 'acdd' => 1]); //Override the tests to be used in compliance checker
       //\Drupal::logger('dataset_upload')->debug('calling parent validate');
         parent::validate($form, $form_state);
-        \Drupal::logger('dataset_upload')->debug('finished parent validate');
+        //\Drupal::logger('dataset_upload')->debug('finished parent validate');
         //\Drupal::logger('dataset_upload')->debug($form_state->get('int_status'));
         //If dataset validation fails, redirect to form page 1.
         if ($form_state->get('int_status') > 0) {
@@ -1735,6 +1741,11 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $form_state->set('metadata', $metadata);
             //Set upload status flag
             $session->set('dataset_upload_status', 'validated');
+
+            //Run aggregation checker if we have multiple netCDF files in archive
+            if (($form_state->has('archived_files') && $form_state->has('aggregate')) && true == $form_state->get('aggregate')) {
+                $form_state->set('page', 3);
+            }
         }
         $form_state->setRebuild();
     }
@@ -1893,7 +1904,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
 
         $form['services'] = [
-  '#type' => 'container',
+  '#type' => 'fieldset',
+  '#title' => $this->t('Select type of dataset and services to be enabled'),
 ];
         $form['services']['select_conf']['dataset_type'] = array(
     '#title' => $this->t('Select the type of dataset you are uploading and the services you would like to activate for your dataset'),
@@ -1951,6 +1963,9 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                  ),
                  ),
   );
+
+
+
         $form['actions']['submit'] = array(
       '#type' => 'submit',
       '#button_type' => 'primary',
@@ -2318,6 +2333,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //Store the given dataset_id for success
 
         if (isset($result['dataset_id'])) {
+            /** NIRD dataset registration SUCCESS */
             $form_state->set('dataset_id', $result['dataset_id']);
             $yaml = [
               'services' => $form_state->get('yaml_services'),
@@ -2325,23 +2341,49 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 'name' => $result['dataset_id'],
               ],
             ];
-            $output_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
-            $yaml_filepath = $output_path.'/'. $result['dataset_id'] . '.yml';
-            //dpm($output_path);
-            //dpm($yaml_file);
+            if ($form_state->has('agg_var')) {
+                $yaml['aggregation'] = [
+                'variable' => $form_state->get('agg_var'),
+              ];
+            }
+            $source_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
+            //$dest_path = $form_state->get('upload_basepath') . $result['dataset_id']. '/';
+            $dest_path = 'private://nird/toArchive/' . $result['dataset_id'];
+
+            $manifest = '/projects/NS45678/import/data/' .$result['dataset_id'];
+
+            $fs = \Drupal::service('file_system');
+            $fs->move($source_path, $dest_path);
+            $yaml_filepath = $dest_path.'/'. $result['dataset_id'] . '.yml';
             //$yaml_file = fopen($yaml_filepath, 'w');
             //fwrite($yaml_file, Yaml::dump($yaml));
             //fwrite($yaml_file, $yaml);
             //fclose($yaml_file);
             $yml = Yaml::encode($yaml);
+            //Write YAML file to disk
             file_put_contents($yaml_filepath, $yml, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+
+            //Write manifest to disk
+            file_put_contents($dest_path .'/manifest.md', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+
             //$yaml_file = file_save_data(Yaml::dump($yaml), $yaml_filepath, FileSystemInterface::EXISTS_REPLACE);
             //$yaml_file->save();
             $form_state->set('yaml_file', $yaml);
             $session->set('dataset_upload_status', 'registered');
+
+            /** Add dataset to custom QueueWorker */
+            $queue = \Drupal::service('queue')->get('nird_upload_queue');
+            $item = new \stdClass();
+            $item->uid = $this->currentUser->id();
+            $item->dataset_id = $result['dataset_id'];
+            $item->nird_status = 'registered';
+            $item->path = $dest_path;
+            $queue->createItem($item);
         }
         if (isset($result['error'])) {
+            /** NIRD dataset registration FAIL */
             $form_state->set('nird_error', $result['error']);
+            $this->cleanUp($user_id, $form_state);
         }
         $form_state->setRebuild();
     }
@@ -2373,7 +2415,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $file->delete();
             }
         }
-        $upload_path = 'public://dataset_upload_folder/';
+        $upload_path = 'private://dataset_upload_folder/';
         $session_id = $session->getId();
 
         $filesystem = \Drupal::service('file_system');
@@ -2440,75 +2482,66 @@ confirming your submission. If the metadata are not correct, cancel your submiss
      * Form action step 3
      * Confirm metadata and display selection of services form
      */
-    public function confirmMetadata(array &$form, FormStateInterface $form_state)
+    public function confirmAggregationForm(array &$form, FormStateInterface $form_state)
     {
-        \Drupal::messenger()->addMessage(t("Metadata confirmation form"));
-        //$form_state->set('page', 3);
-        $session = \Drupal::request()->getSession();
-        $upload_path = $session->get('nird_upload_path');
+        $form['aggregation-message'] = [
+     '#type' => 'markup',
+     '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-yellow w3-pale-yellow w3-padding-16" id="agg-message">',
+     '#markup' => '<span>Your uploaded archive contains more than one netCDF file. Enter the common varible name that will be used for aggregating the datasets</span>',
+     '#suffix' => '</div>',
+     '#allowed_tags' => ['div', 'span'],
+   ];
+
+        $form['agg-fail'] = $this->aggChecker->getMessage();
+        $form['aggregation'] = [
+'#type' => 'textfield',
+'#title' => $this->t('Select the variable name for aggregation'),
+];
+
+
+        $form['actions']['submit'] = array(
+'#type' => 'submit',
+'#button_type' => 'primary',
+'#value' => $this->t('Confirm'),
+'#submit' => ['::confirmAggregation'],
+);
+
+        $form['actions']['cancel'] = array(
+'#type' => 'submit',
+'#value' => $this->t('Cancel submission'),
+'#submit' => ['::cancelSubmission'],
+'#limit_validation_errors' => [],
+);
+
+        return $form;
+    }
+    public function confirmAggregation(array &$form, FormStateInterface $form_state)
+    {
+        //\Drupal::messenger()->addMessage(t("Metadata confirmation form"));
+        $form_state->set('page', 2);
         $user_id = $this->currentUser->id();
-        $base_path = $session->get('dataset_upload_basepath');
-
-        //$fid = $session->get('current_upload_fid');
-        $fid = (int)$form_state->get('upload_fid');
-        $file = File::load($fid); //Load the file object
-      $filename = $file->getFilename(); //Get
-
-      \Drupal::messenger()->addMessage('Chosen variable: ' .$form_state->getValue('aggregation'));
-        if (!empty($form_state->getValue('aggregation'))) {
-            \Drupal::messenger()->addMessage(t('creating aggregation config .ncml'));
-            $ncml_content = '<netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2">';
-            $ncml_content .= "\n";
-            $ncml_content .= '<aggregation dimName="'.$form_state->getValue('aggregation').'" type="joinExisting">';
-            $ncml_content .= "\n";
-            $ncml_content .= '<scan location="." suffix=".nc" />';
-            $ncml_content .= "\n";
-            $ncml_content .= '</aggregation>';
-            $ncml_content .= "\n";
-            $ncml_content .= '</netcdf>';
-            $ncml_content .= "\n";
-            $ncml_file = $upload_path. substr($filename, 0, -4). '.ncml' ;
-            $ncml_config = file_save_data($ncml_content, $ncml_file, FileSystemInterface::EXISTS_REPLACE);
-            $ncml_config->save();
-            \Drupal::messenger()->addMessage(t("Created aggregation config file with fid: " .$ncml_config->id()));
-            $session->set('aggregation_config_fid', $ncml_config->id());
-
-            $archived_files = $session->get('files_in_archive');
-            \Drupal::messenger()->addMessage($archived_files);
-            //create string with list of files which are input to the agg_checker.py
-            $files_to_agg = '';
-            foreach ($archived_files as $file) {
-                //$files_to_agg .= $base_path.'/extract/'.$file.' ';
-                $files_to_agg .= $base_path. '/' .$file.' ';
-            }
-
-            //check dimensions, variables names and attributes to allow for aggregation
-            exec('/usr/local/bin/agg_checker.py '.$files_to_agg.' '.$form_state->getValue('aggregation'), $out_agg, $status_agg);
-            //dpm('/usr/local/bin/agg_checker.py '.$files_to_agg.' '.$form_state->getValue('aggregation'));
-            \Drupal::messenger()->addMessage("agg_checker.py ran with status: " .$status_agg);
-            $fail_agg = false;
-            $msg_agg = array();
-            //build the message with only the Fail prints from the agg_checker.py
-            foreach ($out_agg as $line) {
-                if (strpos($line, 'Fail') !== false) {
-                    $fail_agg = true;
-                    array_push($msg_agg, $line);
-                }
-            }
-
-            // agg_checker.py exit with status 0, but gives Fail messages, i.e. the datasets are not suitable for aggregation
-            if ($fail_agg == true) {
-                \Drupal::messenger()->addMessage(t('Your datasets cannot be aggregated. Check suggestions below:<br>'.print_r(implode('<br>', $msg_agg), true)));
-                \Drupal::messenger()->addMessage(t("agg_checker.py ran with status: " .$status_agg . " and output: " . implode(" ", $out_agg)));
-            }
-            // agg_checker.py exit with status not 0, i.e. it could not be run.
-            if ($status_agg !== 0) {
-                \Drupal::messenger()->addMessage(t('The aggregation validation checker could not be run. Please take contact using the contact form.'));
-                \Drupal::messenger()->addMessage(t("agg_checker.py ran with status: " .$status_agg . " and output: " . implode(" ", $out_agg)));
-            }
+        $base_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
+        $agg_var = $form_state->getValue('aggregation');
+        \Drupal::logger('dataset_upload')->debug($form_state->getValue('aggregation'));
+        $archived_files = $form_state->get('archived_files');
+        //\Drupal::messenger()->addMessage($archived_files);
+        //create string with list of files which are input to the agg_checker.py
+        $files_to_agg = '';
+        foreach ($archived_files as $file) {
+            //$files_to_agg .= $base_path.'/extract/'.$file.' ';
+            $files_to_agg .= $base_path. '/' .$file.' ';
         }
 
-        return $form;  //$form_state->setRebuild();
+        //Call the aggregation checker service
+        $status = $this->aggChecker->check($files_to_agg, $agg_var);
+        //dpm($status);
+        if (!$status) {
+            $form_state->set('page', 3);
+            $form_state->setRebuild();
+        }
+        $form_state->set('agg_var', $agg_var);
+        $form_state->setRebuild();
+        //return $form;
     }
 
     public function confirmServices(array &$form, FormStateInterface $form_state)

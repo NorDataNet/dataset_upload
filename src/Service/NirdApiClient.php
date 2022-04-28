@@ -672,12 +672,12 @@ class NirdApiClient implements NirdApiClientInterface
         }
 
         $response = $this->httpClient->get(
-            $this->config->get('nird_api_dataset_status_endpoint'),
+            $this->config->get('nird_api_dataset_status_endpoint').$dataset_id,
             [
               'base_uri' => $this->config->get('nird_api_base_uri'),
-              'query' => [
-                'dataset_id' => $dataset_id,
-              ],
+            //  'query' => [
+            //    'dataset_id' => $dataset_id,
+            //  ],
               'headers' => [
                 'Authorization' => "{$this->token_type} {$this->token}",
                 'Content-Type' => "application/json",
@@ -688,7 +688,8 @@ class NirdApiClient implements NirdApiClientInterface
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
-            return $this->json::decode($contents);
+            //return $this->json::decode($contents);
+            return $contents;
         }
 
         return [];
