@@ -244,6 +244,15 @@ class DatasetUploadForm extends DatasetValidationForm
           '#suffix' => '</div>',
         ];
 
+
+        /*
+         * RETURN USER TO USER EDIT FORM IF MISSING First and last names
+         *
+         */
+        if ($user->field_first_name == null || $user->field_last_name == null) {
+            $form_state->setRedirect('entity.user.edit_form', $user);
+        }
+
         return $form;
     }
 
@@ -1636,7 +1645,11 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         else {
             $form_state->set('page', 2);
             \Drupal::logger('dataset_upload')->debug('call NIRD API prefill controlled vocabulary');
-            //Call NIRD API to prefetch controlled vocabularies
+
+
+            //Prefetch options from NIRD controlled vocabularies
+            $form_state->set('api_state', $this->nirdApiClient->getState());
+
             $form_state->set('api_state', $this->nirdApiClient->getState());
             //dpm('get category');
             $form_state->set('api_category', $this->nirdApiClient->getCategory());
@@ -1654,6 +1667,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             /**
              * Extract names, roles, type, emails into arrays
              * and store them in the $form_state
+             * TODO: Make a arraystructure instad of lots of arrays
+              * Validate roles and types.
              */
 
             //CONTRIBUTORS (DEPOSITORS)
@@ -1665,6 +1680,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $contributor_type = explode(', ', $metadata['contributor_type']);
                 $form_state->set('contributor_type', $contributor_type);
                 $contributor_type_count = array_count_values($contributor_type);
+
                 //\Drupal::logger('dataset_upload')->debug('contributor role <pre><code>' . print_r($contributor_role, true) . '</code></pre>');
             }
             if (isset($contributor_type_count['person'])) {
@@ -1728,6 +1744,11 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $form_state->set('creator_institution', $creator_institution);
             }
 
+
+            if (!in_array('Data Manager', $contributor_role)) {
+                $form_state->set('page', 1);
+                $form_state->set('validation_message', 'Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
+            }
 
             //rightS HOLDER
             //if(isset($metadata['institution'])) {
@@ -1821,6 +1842,9 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 }
             } */
             }
+            /**
+             * TODO: Create an unique array of the metadata from all files?
+             */
             $metadata = $md;
         }
 
@@ -2346,6 +2370,23 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 'variable' => $form_state->get('agg_var'),
               ];
             }
+
+            //Create md5sum for uploaded netcdf file
+            $file_id = $form_state->get('upload_fid');
+            $file = File::load($file_id);
+            $uri = $file->getFileUri();
+            $base_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
+
+            $filename = $file->getFilename();
+            //dpm($base_path);
+            //dpm($filename);
+            $mime_type = $file->getMimeType();
+            if ($mime_type === 'application/x-netcdf') {
+                $md5sum = md5_file($base_path.'/'.$filename);
+                file_put_contents($base_path.'/'.$filename.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+            } else {
+                $file->delete(); //Delete the uploaded archive after extraction
+            }
             $source_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
             //$dest_path = $form_state->get('upload_basepath') . $result['dataset_id']. '/';
             $dest_path = 'private://nird/toArchive/' . $result['dataset_id'];
@@ -2366,6 +2407,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             //Write manifest to disk
             file_put_contents($dest_path .'/manifest.md', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
 
+
             //$yaml_file = file_save_data(Yaml::dump($yaml), $yaml_filepath, FileSystemInterface::EXISTS_REPLACE);
             //$yaml_file->save();
             $form_state->set('yaml_file', $yaml);
@@ -2378,6 +2420,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $item->dataset_id = $result['dataset_id'];
             $item->nird_status = 'registered';
             $item->path = $dest_path;
+            $item->doi = null;
             $queue->createItem($item);
         }
         if (isset($result['error'])) {
@@ -2527,9 +2570,13 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //\Drupal::messenger()->addMessage($archived_files);
         //create string with list of files which are input to the agg_checker.py
         $files_to_agg = '';
+
+        //Loop the files in archive and create md5sum and get filepaths
         foreach ($archived_files as $file) {
             //$files_to_agg .= $base_path.'/extract/'.$file.' ';
             $files_to_agg .= $base_path. '/' .$file.' ';
+            $md5sum = md5_file($base_path. '/' .$file);
+            file_put_contents($base_path. '/' .$file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
         }
 
         //Call the aggregation checker service
@@ -2540,6 +2587,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $form_state->setRebuild();
         }
         $form_state->set('agg_var', $agg_var);
+
         $form_state->setRebuild();
         //return $form;
     }

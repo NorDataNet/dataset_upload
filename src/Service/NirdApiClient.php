@@ -49,6 +49,14 @@ class NirdApiClient implements NirdApiClientInterface
      */
     private $token_type;
 
+    /**
+     * cache age
+     *
+     * @var int
+     */
+    protected $cache_time; //Hold cache time
+    //protected $cache_time = Cache::PERMANENT; //Permanent caching
+
 
     /**
      * NirdApiClient constructor.
@@ -61,6 +69,7 @@ class NirdApiClient implements NirdApiClientInterface
     {
         $this->config = $configFactory;
         $this->httpClient = $http_client;
+        $this->cache_time = time() + (14*24*60*60); //Cache for 14-days
         $this->json = $json;
     }
 
@@ -70,6 +79,7 @@ class NirdApiClient implements NirdApiClientInterface
     public static function create(ContainerInterface $container)
     {
         $this->httpClient = $container->get('http_client');
+
         return $this;
     }
 
@@ -135,6 +145,16 @@ class NirdApiClient implements NirdApiClientInterface
                 ''
             );
         }
+        /**
+         * Call NIRD API to prefetch controlled vocabularies
+         * We cache those lists to reduce API calls
+         * The time is specified by cache time
+         */
+
+        if ($cache = \Drupal::cache()->get('nird_state')) {
+            $options = $cache->data;
+            return $options;
+        }
 
         $response = $this->httpClient->get(
             $this->config->get('nird_api_state_endpoint'),
@@ -151,6 +171,7 @@ class NirdApiClient implements NirdApiClientInterface
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
             $states = $this->json::decode($contents);
+            \Drupal::cache()->set('nird_state', $states['state'], $this->cache_time);
             return $states['state'];
         }
 
@@ -174,6 +195,10 @@ class NirdApiClient implements NirdApiClientInterface
                 ''
             );
         }
+        if ($cache = \Drupal::cache()->get('nird_category')) {
+            $options = $cache->data;
+            return $options;
+        }
 
         $response = $this->httpClient->get(
             $this->config->get('nird_api_category_endpoint'),
@@ -189,7 +214,8 @@ class NirdApiClient implements NirdApiClientInterface
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
-            //dpm($contents);
+            \Drupal::cache()->set('nird_category', $this->json::decode($contents)['category'], $this->cache_time);
+
             return $this->json::decode($contents)['category'];
         }
 
@@ -213,6 +239,10 @@ class NirdApiClient implements NirdApiClientInterface
                 ''
             );
         }
+        if ($cache = \Drupal::cache()->get('nird_subject')) {
+            $options = $cache->data;
+            return $options;
+        }
 
         $response = $this->httpClient->get(
             $this->config->get('nird_api_subject_endpoint'),
@@ -233,6 +263,7 @@ class NirdApiClient implements NirdApiClientInterface
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
+            \Drupal::cache()->set('nird_subject', $this->json::decode($contents)['identifiers'], $this->cache_time);
             return $this->json::decode($contents)['identifiers'];
         }
 
@@ -377,6 +408,11 @@ class NirdApiClient implements NirdApiClientInterface
                 ''
             );
         }
+        if ($cache = \Drupal::cache()->get('nird_license')) {
+            $options = $cache->data;
+            return $options;
+        }
+
         $response = $this->httpClient->get(
             $this->config->get('nird_api_license_endpoint'),
             [
@@ -395,7 +431,7 @@ class NirdApiClient implements NirdApiClientInterface
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
-
+            \Drupal::cache()->set('nird_license', $contents['licences'], $this->cache_time);
             return $contents['licences'];
         }
 
@@ -712,6 +748,44 @@ class NirdApiClient implements NirdApiClientInterface
 
         $response = $this->httpClient->get(
             $this->config->get('nird_api_dataset_landing_page_endpoint'),
+            [
+              'base_uri' => $this->config->get('nird_api_base_uri'),
+              'query' => [
+                'dataset_id' => $doi,
+              ],
+              'headers' => [
+                'Authorization' => "{$this->token_type} {$this->token}",
+                'Content-Type' => "application/json",
+                'Accept' => 'application/json',
+              ],
+            ],
+        );
+
+        if ($response->getStatusCode() === 200) {
+            $contents = $this->json::decode($response->getBody()->getContents());
+            return $this->json::decode($contents);
+        }
+
+        return [];
+    }
+
+    public function searchOrganization(string $query = ''): array
+    {
+        if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
+
+        $response = $this->httpClient->get(
+            $this->config->get('nird_api_search_org_endpoint'),
             [
               'base_uri' => $this->config->get('nird_api_base_uri'),
               'query' => [

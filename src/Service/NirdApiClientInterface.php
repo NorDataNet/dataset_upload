@@ -12,18 +12,18 @@ namespace Drupal\dataset_upload\Service;
  */
 interface NirdApiClientInterface
 {
-  /**
-   * Athenticate against NIRD API, and get authentication token..
-   *
-   * @param string $grant_type
-   * @param string $username
-   * @param string $password
-   * @param string $scope
-   * @param string $client_id
-   * @param string $client_secret
-   *
+    /**
+     * Athenticate against NIRD API, and get authentication token..
+     *
+     * @param string $grant_type
+     * @param string $username
+     * @param string $password
+     * @param string $scope
+     * @param string $client_id
+     * @param string $client_secret
+     *
 
-   */
+     */
     public function getToken(
         string $grant_type = '',
         string $username,
@@ -200,4 +200,14 @@ interface NirdApiClientInterface
      * @return array
      */
     public function getDatasetLandingPage(string $doi): array;
+
+
+    /**
+     * Search  for organizations.
+     *
+     * @param string $query
+     *
+     * @return array
+     */
+    public function searchOrganization(string $query): array;
 }

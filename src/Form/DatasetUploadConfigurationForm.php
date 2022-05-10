@@ -184,6 +184,13 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
             '#default_value' => $config->get('nird_api_landing_page_endpoint'),
           '#size' => 35,
         ];
+
+        $form['api']['nird_api_search_org_endpoint'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('NIRD API search Organization endpoint'),
+            '#default_value' => $config->get('nird_api_search_org_endpoint'),
+          '#size' => 35,
+        ];
         /*
                 $form['data_manager'] = [
 
@@ -303,6 +310,8 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_organization_endpoint', $values['nird_api_organization_endpoint'])
       ->set('nird_api_dataset_status_endpoint', $values['nird_api_dataset_status_endpoint'])
       ->set('nird_api_landing_page_endpoint', $values['nird_api_landing_page_endpoint'])
+      ->set('nird_api_search_org_endpoint', $values['nird_api_search_org_endpoint'])
+
       /*
       ->set('data_manager_longname', $values['data_manager']['longname'])
       ->set('data_manager_shortname', $values['data_manager']['shortname'])
