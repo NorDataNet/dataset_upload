@@ -244,6 +244,18 @@ class DatasetUploadForm extends DatasetValidationForm
           '#suffix' => '</div>',
         ];
 
+        if ($form_state->has('validation_message')) {
+            $form_state->get('validation_message');
+
+            foreach ($validation_message as $msg) {
+                $form['container']['validation_message'][] = [
+              '#type' => 'markup',
+              '#prefix' => '<p>',
+              '#suffix' => '</p>',
+              '#markup' => $msg,
+            ];
+            }
+        }
 
         /*
          * RETURN USER TO USER EDIT FORM IF MISSING First and last names
@@ -1744,11 +1756,25 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $form_state->set('creator_institution', $creator_institution);
             }
 
-
+            $validation_message = [];
             if (!in_array('Data Manager', $contributor_role)) {
                 $form_state->set('page', 1);
-                $form_state->set('validation_message', 'Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
+                array_push($validation_message, 'Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
+                $form_state->set('validation_message', $validation_message);
             }
+
+            if (is_null($contributor_type_count) || $contributor_type_count === 0) {
+                $form_state->set('page', 1);
+                array_push($validation_message, 'Missing contributors. Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
+                $form_state->set('validation_message', $validation_message);
+            }
+            if (is_null($creator_type_count) || $creator_type_count === 0) {
+                $form_state->set('page', 1);
+                array_push($validation_message, 'Missing contributors. Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
+                $form_state->set('validation_message', $validation_message);
+            }
+            $form_state->set('validation_message', $validation_message);
+
 
             //rightS HOLDER
             //if(isset($metadata['institution'])) {
@@ -2530,15 +2556,28 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['aggregation-message'] = [
      '#type' => 'markup',
      '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-yellow w3-pale-yellow w3-padding-16" id="agg-message">',
-     '#markup' => '<span>Your uploaded archive contains more than one netCDF file. Enter the common varible name that will be used for aggregating the datasets</span>',
+     '#markup' => '<span>Your uploaded archive contains more than one netCDF file. If you want the datasets to be aggregated on the THREDDS service, tick this checkbox and enter a common variable name for aggregation.</span>',
      '#suffix' => '</div>',
      '#allowed_tags' => ['div', 'span'],
    ];
 
         $form['agg-fail'] = $this->aggChecker->getMessage();
+        $form['doagg'] = [
+          '#type' => 'checkbox',
+          '#title' => t('Tick this box to aggregate datasets'),
+
+        ];
         $form['aggregation'] = [
 '#type' => 'textfield',
-'#title' => $this->t('Select the variable name for aggregation'),
+'#title' => $this->t('Enter the variable name for aggregation'),
+'#states' => array(
+    // Only show this field when the 'toggle_me' checkbox is enabled.
+    'visible' => array(
+      ':input[name="doagg"]' => array(
+        'checked' => true,
+      ),
+    ),
+  ),
 ];
 
 
@@ -2570,23 +2609,25 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //\Drupal::messenger()->addMessage($archived_files);
         //create string with list of files which are input to the agg_checker.py
         $files_to_agg = '';
+        if ($form_state->getValue('doagg')) {
+            //Loop the files in archive and create md5sum and get filepaths
+            foreach ($archived_files as $file) {
+                //$files_to_agg .= $base_path.'/extract/'.$file.' ';
+                $files_to_agg .= $base_path. '/' .$file.' ';
+                $md5sum = md5_file($base_path. '/' .$file);
+                file_put_contents($base_path. '/' .$file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+            }
 
-        //Loop the files in archive and create md5sum and get filepaths
-        foreach ($archived_files as $file) {
-            //$files_to_agg .= $base_path.'/extract/'.$file.' ';
-            $files_to_agg .= $base_path. '/' .$file.' ';
-            $md5sum = md5_file($base_path. '/' .$file);
-            file_put_contents($base_path. '/' .$file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
-        }
+            //Call the aggregation checker service
+            $status = $this->aggChecker->check($files_to_agg, $agg_var);
+            //dpm($status);
+            if (!$status) {
+                $form_state->set('page', 3);
+                $form_state->setRebuild();
+            }
 
-        //Call the aggregation checker service
-        $status = $this->aggChecker->check($files_to_agg, $agg_var);
-        //dpm($status);
-        if (!$status) {
-            $form_state->set('page', 3);
-            $form_state->setRebuild();
+            $form_state->set('agg_var', $agg_var);
         }
-        $form_state->set('agg_var', $agg_var);
 
         $form_state->setRebuild();
         //return $form;
