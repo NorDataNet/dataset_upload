@@ -2317,15 +2317,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $creator = $dataset['creator'];
 
         //Subject
-        $subject = $dataset['subject'];
+        //$subject = $dataset['subject'];
 
         //FOR testing
-        $subject = (object) [
-           'domain' => 'Natural sciences',
-           'field' => 'Space science',
-           'subfield' => 'Astrophysics'
-         ];
-
+        /*  $subject = (object) [
+             'domain' => 'Natural sciences',
+             'field' => 'Space science',
+             'subfield' => 'Astrophysics'
+           ];
+           */
         $dataset['created'] = $form_state->getValue(['dataset','created']); //->format('Y-m-d');
         $dataset['category'] = [[
           'name' => $category,
@@ -2363,6 +2363,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
           $subject
         ];*/
 
+        // Save the json response in the from_state.
         $json = Json::encode($dataset);
         $form_state->set('json', $json);
         //\Drupal::logger('dataset_upload')->debug($json);
@@ -2385,10 +2386,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         if (isset($result['dataset_id'])) {
             /** NIRD dataset registration SUCCESS */
             $form_state->set('dataset_id', $result['dataset_id']);
+
+            /**
+             * Creating YAML dataset THREDDS information object
+             */
             $yaml = [
               'services' => $form_state->get('yaml_services'),
               'dataset' => [
                 'name' => $result['dataset_id'],
+                'title' => $dataset['title'],
               ],
             ];
             if ($form_state->has('agg_var')) {
@@ -2605,7 +2611,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $base_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
         $agg_var = $form_state->getValue('aggregation');
         \Drupal::logger('dataset_upload')->debug($form_state->getValue('aggregation'));
-        $archived_files = $form_state->get('archived_files');
+        $archived_files = $form_state->get('agg_files');
+        //dpm($archived_files);
         //\Drupal::messenger()->addMessage($archived_files);
         //create string with list of files which are input to the agg_checker.py
         $files_to_agg = '';
@@ -2613,9 +2620,14 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             //Loop the files in archive and create md5sum and get filepaths
             foreach ($archived_files as $file) {
                 //$files_to_agg .= $base_path.'/extract/'.$file.' ';
+                /*
                 $files_to_agg .= $base_path. '/' .$file.' ';
                 $md5sum = md5_file($base_path. '/' .$file);
                 file_put_contents($base_path. '/' .$file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+                */
+                $files_to_agg .= $file.' ';
+                $md5sum = md5_file($file);
+                file_put_contents($file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
             }
 
             //Call the aggregation checker service
