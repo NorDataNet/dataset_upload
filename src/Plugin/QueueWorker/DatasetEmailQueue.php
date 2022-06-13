@@ -8,6 +8,7 @@ use Drupal\Core\Queue\DelayableQueueInterface;
 use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\RequeueException;
 use Drupal\Core\Queue\SuspendQueueException;
+use Drupal\file\Entity\File;
 
 /**
  * Plugin implementation of the nird_queue queueworker.
@@ -42,9 +43,10 @@ class DatasetEmailQueue extends QueueWorkerBase
         $status = $nird->getDatasetStatus($data->dataset_id);
         \Drupal::logger('nird')->debug('dataset_status:  <pre><code>' . print_r($status, true) . '</code></pre>');
 
-
+        //TEST FOR ALWAYS HAVE A DOI
+        $status['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
         //Requeue for 1 hour and check again if we have no DOI
-        if ($status['doi']) {
+        if (!$status['doi']) {
             \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
             throw new DelayedRequeueException(3600);
 
@@ -57,7 +59,7 @@ class DatasetEmailQueue extends QueueWorkerBase
             $module = 'dataset_upload';
             $key = 'dataset_published';
             $to = $user->getEmail();
-            $params['message'] = t('Your dataset is now published with DOI: @doi', ['@doi' => 'https://doi.org/10.21203/rs.3.rs-361384/v1']);
+            $params['message'] = t('Your dataset is now published with DOI: @doi', ['@doi' => $data->doi]);
             $params['title'] = $data->title;
             $params['id'] = $data->dataset_id;
             //$params['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';

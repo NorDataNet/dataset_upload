@@ -43,7 +43,7 @@ class MinIOService
         $cmd = '/usr/bin/rclone --config='.MinIOService::CONFIG_FILE . ' copy '.$source_path . ' minio:'.MinIOService::BASE_DEST.$id;
         //Upload the file(s)
         exec($cmd, $out, $status);
-        \Drupal::logger('dataset_upload')->debug('Rclone: <pre><code>' . print_r($out, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('Rclone: <pre><code>' . print_r($out, true) . '</code></pre>');
         \Drupal::logger('dataset_upload')->debug('Rclone CMD status: '. $status);
 
 
