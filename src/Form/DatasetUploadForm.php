@@ -1757,7 +1757,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             }
 
             $validation_message = [];
-            if (!in_array('Data Manager', $contributor_role)) {
+            if (is_null($contributor_role) || (!in_array('Data Manager', $contributor_role))) {
                 $form_state->set('page', 1);
                 array_push($validation_message, 'Contributor with role "Data Manager" missing. Pleace update your ACDD attributes in your uploaded netCDF files');
                 $form_state->set('validation_message', $validation_message);

@@ -44,7 +44,10 @@ class DatasetEmailQueue extends QueueWorkerBase
         \Drupal::logger('nird')->debug('dataset_status:  <pre><code>' . print_r($status, true) . '</code></pre>');
 
         //TEST FOR ALWAYS HAVE A DOI
-        $status['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
+        $r = rand(0, 10);
+        if ($r <= 5) {
+            $status['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
+        }
         //Requeue for 1 hour and check again if we have no DOI
         if (!$status['doi']) {
             \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
@@ -84,6 +87,7 @@ class DatasetEmailQueue extends QueueWorkerBase
                 }
                 $filesystem = \Drupal::service('file_system');
                 $filesystem->deleteRecursive($data->path);
+                return true;
             }
         }
     }
