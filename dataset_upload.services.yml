@@ -18,3 +18,9 @@ services:
     # AggregationChecker service
   dataset_upload.attribute_extractor:
     class: \Drupal\dataset_upload\Service\AttributeExtractor
+
+
+   # MinIO Rclone upload service
+  dataset_upload.minio_service:
+    class: \Drupal\dataset_upload\Service\MinIOService
+

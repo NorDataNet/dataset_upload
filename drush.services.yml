@@ -1,0 +1,6 @@
+services:
+  dataset_upload.commands:
+    class: Drupal\dataset_upload\Commands\DatasetUploadCommands
+    arguments: ['@logger.factory', '@config.factory', '@dataset_upload.nird_api_client', '@queue', '@plugin.manager.queue_worker']
+    tags:
+      - { name: drush.command }

@@ -10,10 +10,9 @@ use Drupal\Component\Serialization\Json;
 
 class DatasetUploadController extends ControllerBase
 {
-
-  /**
-    * Display errors from failed compliance checker
-    */
+    /**
+      * Display errors from failed compliance checker
+      */
     public function failedCChecker()
     {
         $session = \Drupal::request()->getSession();
@@ -55,5 +54,32 @@ class DatasetUploadController extends ControllerBase
   ];
 
         return $renderArr;
+    }
+
+    //Testing running rclone via php
+    public function rcloneTest()
+    {
+        $config_file = '/home/magnarem/rclone/rclone.conf';
+        $source = '/var/www/drupal9/files/metsis-dev.local/private/nird/toArchive/5C26E115-C094-49BA-8F40-8CC7FA6E4847';
+        $dest = '5C26E115-C094-49BA-8F40-8CC7FA6E4847';
+        $dest_base = 'import/test-magnar/';
+
+        $cmd = '/usr/bin/rclone --config='.$config_file . ' copy '.$source . ' minio:'.$dest_base.$dest . ' -vv';
+        dpm($cmd);
+        $retval = null;
+        $output = [];
+        exec($cmd, $output, $retval);
+        //$status = shell_exec($cmd);
+        dpm($retval);
+        dpm($output);
+        //dpm($string);
+
+        \Drupal::logger('rclone')->debug('<pre><code>' . print_r($output, true) . '</code></pre>');
+        //\Drupal::logger('rclone_status')->debug($status);
+
+        return [
+          '#type' => 'markup',
+          '#markup' => $cmd . '<p>' . $retval. '<p>' . $output,
+        ];
     }
 }

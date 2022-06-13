@@ -1,6 +1,12 @@
 <?php
 
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Queue\QueueWorkerBase;
+use Drupal\Core\Queue\DelayableQueueInterface;
+use Drupal\Core\Queue\DelayedRequeueException;
+use Drupal\Core\Queue\RequeueException;
+use Drupal\Core\Queue\SuspendQueueException;
+
 /**
  * Implements hook_help().
  */
@@ -17,4 +23,56 @@ function dataset_upload_help($route_name, RouteMatchInterface $route_match)
 
     default:
   }
+}
+
+/**
+* Implements hook_mail().
+*/
+function dataset_upload_mail($key, &$message, $params)
+{
+    $options = array(
+   'langcode' => $message['langcode'],
+ );
+
+    switch ($key) {
+   case 'dataset_published':
+     $message['from'] = \Drupal::config('system.site')->get('mail');
+     $message['subject'] = t('Your dataset: @title with id @id are now published', array('@title' => $params['title'], '@id' => $params['id']), $options);
+     $message['body'][] = $params['message'];
+     break;
+ }
+}
+
+/**
+ * Implements hook_cron()
+ *
+ * Check dataset status and send email to contributor
+ * when dataset is published and have a doi
+ */
+function dataset_upload_cron()
+{
+    $queue = \Drupal::service('queue')->get('nird_email_queue');
+    $queue_worker = \Drupal::service('plugin.manager.queue_worker')->createInstance('nird_email_queue');
+
+
+    while ($item = $queue->claimItem()) {
+        try {
+            $queue_worker->processItem($item->data);
+            $queue->deleteItem($item);
+        } catch (DelayedRequeueException $e) {
+            // If the worker indicates there is a problem with the whole queue,
+            // release the item and skip to the next queue.
+            $queue->releaseItem($item);
+            break;
+        } catch (SuspendQueueException $e) {
+            // If the worker indicates there is a problem with the whole queue,
+            // release the item and skip to the next queue.
+            $queue->releaseItem($item);
+            break;
+        } catch (\Exception $e) {
+            // In case of any other kind of exception, log it and leave the item
+            // in the queue to be processed again later.
+            watchdog_exception('nird_status', $e);
+        }
+    }
 }

@@ -1,0 +1,13 @@
+{
+    "name": "nordatanet/dataset_uplad",
+    "type": "drupal-module",
+    "description": "NIRD dataset upload module",
+    "license": "GPL-2.0+",
+"extra": {
+    "drush": {
+      "services": {
+        "drush.services.yml": "^11"
+      }
+    }
+  }
+}

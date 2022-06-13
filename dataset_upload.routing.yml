@@ -25,3 +25,13 @@ system.admin_config_nordatanet:
     description: 'NorDataNet Specific configuraton'
   requirements:
     _permission: 'administer site configuration'
+
+
+dataset_upload.rclone:
+  path: '/dataset_upload/rclone'
+  defaults:
+    _controller: '\Drupal\dataset_upload\Controller\DatasetUploadController::rcloneTest'
+    _title: 'rclone test'
+  requirements:
+    #_permission: 'ALL'
+    _permission: 'nordatanet upload nird'

@@ -286,7 +286,7 @@ class DatasetUploadForm extends DatasetValidationForm
        */
         $user = \Drupal\user\Entity\User::load($this->currentUser->id());
         //dpm($user);
-        \Drupal::logger('dataset_upload')->debug('Building datasetForm');
+        //\Drupal::logger('dataset_upload')->debug('Building datasetForm');
         //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, true) . '</code></pre>');
         //Get the config object from config factory.
         $config = self::config('dataset_upload.settings');
@@ -1434,7 +1434,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
       //'#default_value' => $this->currentUser->getEmail(),
     ];
             }
-            if ($creator_types[$i] === 'organization') {
+            if (in_array($creator_types[$i], ['organization','group','institution','position'])) {
                 $shortname = '';
                 $longname = '';
                 $exp = '/([\w\s]+)/';
@@ -2229,7 +2229,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $user_id = $this->currentUser->id();
 
         $dataset = $form_state->getValues()['dataset'];
-        \Drupal::logger('dataset_upload_dataset_before')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload_dataset_before')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
 
         /**
          * Modify array of form values and encode to json for
@@ -2371,7 +2371,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r(Json::encode($json), true) . '</code></pre>');
 
 
-        \Drupal::logger('dataset_upload_dataset_after')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload_dataset_after')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
 
         /*
          * Call the NIRD API create dataset endpoint
@@ -2386,7 +2386,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         if (isset($result['dataset_id'])) {
             /** NIRD dataset registration SUCCESS */
             $form_state->set('dataset_id', $result['dataset_id']);
-
+            \Drupal::logger('nird')->notice('Registered dataset with id: ' . $result['dataset_id']);
             /**
              * Creating YAML dataset THREDDS information object
              */
@@ -2437,7 +2437,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             file_put_contents($yaml_filepath, $yml, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
 
             //Write manifest to disk
-            file_put_contents($dest_path .'/manifest.md', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+            file_put_contents($dest_path .'/MANIFEST', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
 
 
             //$yaml_file = file_save_data(Yaml::dump($yaml), $yaml_filepath, FileSystemInterface::EXISTS_REPLACE);
@@ -2451,8 +2451,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $item->uid = $this->currentUser->id();
             $item->dataset_id = $result['dataset_id'];
             $item->nird_status = 'registered';
-            $item->path = $dest_path;
+            $item->path =  \Drupal::service('file_system')->realpath($dest_path);
             $item->doi = null;
+            $item->title = $dataset['title'];
+
+            // Add the file id to queue item if the file is a sigle netCDF
+            if ($file->getMimeType() === 'application/x-netcdf') {
+                $item->fid = $file_id;
+            }
+            //Add queue item to Queue.
             $queue->createItem($item);
         }
         if (isset($result['error'])) {
