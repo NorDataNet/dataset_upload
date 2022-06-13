@@ -62,7 +62,7 @@ class DatasetEmailQueue extends QueueWorkerBase
             $module = 'dataset_upload';
             $key = 'dataset_published';
             $to = $user->getEmail();
-            $params['message'] = t('Your dataset is now published with DOI: @doi', ['@doi' => $data->doi]);
+            $params['message'] = t('Your dataset is now published with DOI: @doi', ['@doi' => $status['doi']]);
             $params['title'] = $data->title;
             $params['id'] = $data->dataset_id;
             //$params['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
@@ -80,11 +80,13 @@ class DatasetEmailQueue extends QueueWorkerBase
                 \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
 
                 //Clean up the files.
+                if(property_exists($data, 'fid') {
                 $fid = $data->fid;
                 $file = File::load($fid);
                 if (isset($file)) {
                     $file->delete();
                 }
+              }
                 $filesystem = \Drupal::service('file_system');
                 $filesystem->deleteRecursive($data->path);
                 return true;
