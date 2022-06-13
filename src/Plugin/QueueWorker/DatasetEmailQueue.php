@@ -80,13 +80,13 @@ class DatasetEmailQueue extends QueueWorkerBase
                 \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
 
                 //Clean up the files.
-                if(property_exists($data, 'fid') {
-                $fid = $data->fid;
-                $file = File::load($fid);
-                if (isset($file)) {
-                    $file->delete();
+                if (property_exists($data, 'fid')) {
+                    $fid = $data->fid;
+                    $file = File::load($fid);
+                    if (isset($file)) {
+                        $file->delete();
+                    }
                 }
-              }
                 $filesystem = \Drupal::service('file_system');
                 $filesystem->deleteRecursive($data->path);
                 return true;
