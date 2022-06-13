@@ -73,6 +73,15 @@ class DatasetEmailQueue extends QueueWorkerBase
                 throw new DelayedRequeueException(3600);
             } else {
                 \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
+
+                //Clean up the files.
+                $fid = $data->fid;
+                $file = File::load($fid);
+                if (isset($file)) {
+                    $file->delete();
+                }
+                $filesystem = \Drupal::service('file_system');
+                $filesystem->deleteRecursive($data->path);
             }
         }
     }

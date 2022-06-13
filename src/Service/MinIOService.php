@@ -13,13 +13,12 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  */
 class MinIOService
 {
-
     /**
      * Constants for config and base destination
      */
-   const CONFIG_FILE = '/home/magnarem/rclone/rclone.conf';
-   const BASE_DEST = 'import/test-magnar/';
-    
+    public const CONFIG_FILE = '/home/ubuntu/rclone/rclone.conf';
+    public const BASE_DEST = 'import/test-magnar/';
+
     /**
      * Private state variables
      */
@@ -39,14 +38,14 @@ class MinIOService
     public function upload(string $source_path, string $id)
     {
         $out = null;
-	$status = null;
+        $status = null;
 
-	$cmd = '/usr/bin/rclone --config='.MinIOService::CONFIG_FILE . ' copy '.$source_path . ' minio:'.MinIOService::BASE_DEST.$id;
+        $cmd = '/usr/bin/rclone --config='.MinIOService::CONFIG_FILE . ' copy '.$source_path . ' minio:'.MinIOService::BASE_DEST.$id;
         //Upload the file(s)
         exec($cmd, $out, $status);
         \Drupal::logger('dataset_upload')->debug('Rclone: <pre><code>' . print_r($out, true) . '</code></pre>');
         \Drupal::logger('dataset_upload')->debug('Rclone CMD status: '. $status);
-	
+
 
         if ($status !== 0) {
             $this->message = $out;
