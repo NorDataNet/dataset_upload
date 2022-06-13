@@ -15,7 +15,6 @@ use Drupal\Component\Serialization\Json;
  * @QueueWorker (
  *   id = "nird_upload_queue",
  *   title = @Translation("Upload registered datasets to project area"),
- *   cron = {"time" = 300}
  * )
  */
 class DatasetUploadQueue extends QueueWorkerBase
@@ -36,6 +35,9 @@ class DatasetUploadQueue extends QueueWorkerBase
 
 
          */
+
+        \Drupal::logger('nird')->info('nird upload: processing  ' . $data->dataset_id);
+
         //Get the minio upload service
         $minio = \Drupal::service('dataset_upload.minio_service');
 

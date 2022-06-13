@@ -25,16 +25,18 @@ class DatasetEmailQueue extends QueueWorkerBase
      */
     public function processItem($data)
     {
+        \Drupal::logger('nird')->info('nird dataset status check: processing  ' . $data->dataset_id);
 
-      /**
-       * PSEUDO CODE:
-       * Get item.
-       * Get dataset statu from nird api
-       * if dataset have status ok and doi
-       * send email to user that the dataset are available
-       * if dataset do not have status.
-       * put back into queue, and process next time.
-       */
+
+        /**
+         * PSEUDO CODE:
+         * Get item.
+         * Get dataset statu from nird api
+         * if dataset have status ok and doi
+         * send email to user that the dataset are available
+         * if dataset do not have status.
+         * put back into queue, and process next time.
+         */
         $nird = \Drupal::service('dataset_upload.nird_api_client');
         \Drupal::logger('nird')->debug('queue item <pre><code>' . print_r($data, true) . '</code></pre>');
         $status = $nird->getDatasetStatus($data->dataset_id);
@@ -43,13 +45,13 @@ class DatasetEmailQueue extends QueueWorkerBase
 
         //Requeue for 1 hour and check again if we have no DOI
         if ($status['doi']) {
+            \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
             throw new DelayedRequeueException(3600);
 
         //If dataset is published, we send an email.
         } else {
-            \Drupal::logger('nird')->debug('Got DOI. continue with email');
             $user = \Drupal\user\Entity\User::load($data->uid);
-
+            \Drupal::logger('nird')->notice('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
 
             $mailManager = \Drupal::service('plugin.manager.mail');
             $module = 'dataset_upload';
