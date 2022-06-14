@@ -47,8 +47,9 @@ This module implements one Drush command for processing the uploaded datasets.
 The two drupal queues needs to be executed by CRON every x minutes.
 This is an example crontab.
 
-`*/5 * * * * /usr/bin/php /var/www/staging/vendor/drush/drush/drush queue:run nird_upload_queue --root=/var/www/staging --uri=metsis-staging.met.no > /tmp/nird_upload.log 2>&1
-*/5 * * * * /usr/bin/php /var/www/staging/vendor/drush/drush/drush queue:run nird_email_queue --root=/var/www/staging --uri=metsis-staging.met.no > /tmp/nird_email.log 2>&1
+`*/5 * * * * /usr/bin/php /var/www/staging/vendor/drush/drush/drush queue:run nird_upload_queue --root=/var/www/staging --uri=metsis-staging.met.no > /tmp/nird_upload.log 2>&1`
+
+`*/5 * * * * /usr/bin/php /var/www/staging/vendor/drush/drush/drush queue:run nird_email_queue --root=/var/www/staging --uri=metsis-staging.met.no > /tmp/nird_email.log 2>&1
 `
 ### TODO
 
