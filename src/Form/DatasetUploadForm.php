@@ -144,7 +144,8 @@ class DatasetUploadForm extends DatasetValidationForm
     }
 
     /**
-     * Build form step 1: Upload file
+     * Build form. Calling other buildForm function using hte page attribute in the form stage.
+     * for simulating forms with steps.
      *
      * @param $form
      * @param $form_state
@@ -160,6 +161,8 @@ class DatasetUploadForm extends DatasetValidationForm
 
         //Get the config of the module
         $config = self::config('dataset_upload.settings');
+
+        //Get the current user object.
         $user = \Drupal\user\Entity\User::load($this->currentUser->id());
 
         /**
@@ -181,6 +184,8 @@ class DatasetUploadForm extends DatasetValidationForm
          * function for that step/page
          */
 
+
+        //Give an error if something went wrong with NIRD API call.
         if ($form_state->has('nird_error')) {
             $form['nird-error'] = [
             '#type' => 'markup',
@@ -195,6 +200,7 @@ class DatasetUploadForm extends DatasetValidationForm
             return $form;
         }
 
+        //Return form for confirming services.
         if ($form_state->has('page') && $form_state->get('page') == 2) {
             //dpm('building dataset form');
 
@@ -202,17 +208,23 @@ class DatasetUploadForm extends DatasetValidationForm
             //return self::buildDatasetForm($form, $form_state);
         }
 
+        //Return form for confirming aggregation.
         if ($form_state->has('page') && $form_state->get('page') == 3) {
             return self::confirmAggregationForm($form, $form_state);
         }
 
+        //NOT IN USE AT THE MOMENT
         if ($form_state->has('page') && $form_state->get('page') == 4) {
             return self::formPageFour($form, $form_state);
         }
+
+        //Build the main dataset form for filling out metadata of the uploaded dataset(s).
         if ($form_state->has('page') && $form_state->get('page') == 5) {
             return self::buildDatasetForm($form, $form_state);
             //return self::confirmServicesForm($form, $form_state);
         }
+
+        //Return the confirmation form
         if ($form_state->has('page') && $form_state->get('page') == 6) {
 
             //Cleanup now during development,
@@ -220,6 +232,8 @@ class DatasetUploadForm extends DatasetValidationForm
             return self::registrationConfirmedForm($form, $form_state);
             //return self::confirmServicesForm($form, $form_state);
         }
+
+        //Do some cleaning up, if a form was started and not finished.
         if ($session->has('dataset_upload_status')) {
             $status = $session->get('dataset_upload_status');
             if ($status !== 'registered') {
@@ -228,13 +242,18 @@ class DatasetUploadForm extends DatasetValidationForm
             }
         }
 
+
+        /**
+         * First page/step. Get the dataset_validation form
+         */
         //Set form page/step
         $form_state->set('page', 1);
-        //  dpm('building form page 1...');
-        //dpm('buildeing parent form');
-        //Get the upload valitation form
+        //Set the upload path
         $form_state->set('upload_basepath', 'private://dataset_upload_folder/');
+        //Get the upload valitation form
         $form = parent::buildForm($form, $form_state);
+
+        //Empty the tests (ie. invoke manual)
         $form['container']['creation']['test'] = []; //[
 
         $form['container']['message'] = [
@@ -285,10 +304,7 @@ class DatasetUploadForm extends DatasetValidationForm
        * Load the current user object to extract more information about the user submittingthe form.
        */
         $user = \Drupal\user\Entity\User::load($this->currentUser->id());
-        //dpm($user);
-        //\Drupal::logger('dataset_upload')->debug('Building datasetForm');
-        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($user, true) . '</code></pre>');
-        //Get the config object from config factory.
+        ///Get the config object from config factory.
         $config = self::config('dataset_upload.settings');
 
         $form['#tree'] = true;
@@ -1871,7 +1887,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             /**
              * TODO: Create an unique array of the metadata from all files?
              */
-            $metadata = $md;
+            $metadata = $md[0];
         }
 
         /**

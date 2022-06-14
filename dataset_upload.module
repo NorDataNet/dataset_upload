@@ -37,7 +37,7 @@ function dataset_upload_mail($key, &$message, $params)
     switch ($key) {
    case 'dataset_published':
      $message['from'] = \Drupal::config('system.site')->get('mail');
-     $message['subject'] = t('Your dataset: @title with id @id are now published', array('@title' => $params['title'], '@id' => $params['id']), $options);
+     $message['subject'] = t('Your dataset(s): @title with id @id are now published', array('@title' => $params['title'], '@id' => $params['id']), $options);
      $message['body'][] = $params['message'];
      break;
  }
