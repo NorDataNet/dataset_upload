@@ -38,12 +38,12 @@ This module implements two Drupal QueueWorkers that are used to process the uplo
 * nird_email_queue
   - Queue for checking that the uploaded dataset(s) have been published. If the dataset is published, it will send an email to the depositor user. If not, postpone.
 
-### Drush commands.
+### Drush commands
 This module implements one Drush command for processing the uploaded datasets.
 * nird:process
-  - process the nird_email_queue. NOT IN USE AS OF now
+  - process the nird_email_queue. NOT IN USE AS OF NOW.
 
-### CRON.
+### CRON
 The two drupal queues needs to be executed by CRON every x minutes.
 This is an example crontab.
 
