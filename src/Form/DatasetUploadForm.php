@@ -297,7 +297,7 @@ class DatasetUploadForm extends DatasetValidationForm
          *
          */
         if (!isset($user->field_first_name) || !isset($user->field_last_name)) {
-            $form_state->setRedirect('entity.user.edit_form', $user);
+            $form_state->setRedirect('entity.user.edit_form');
         }
 
         return $form;
