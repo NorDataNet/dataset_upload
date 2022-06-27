@@ -58,7 +58,7 @@ class DatasetUploadQueue extends QueueWorkerBase
             $data->nird_status = 'uploaded';
             $queue->createItem($data);
         } else {
-            \Drupal::logger('nird')->debug('minio rclone failed: <pre><code>' . print_r($minio->getMessage(), true) . '</code></pre>');
+            \Drupal::logger('nird')->error('minio rclone failed: <pre><code>' . print_r($minio->getMessage(), true) . '</code></pre>');
         }
     }
 }

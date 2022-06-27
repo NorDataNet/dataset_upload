@@ -39,9 +39,9 @@ class DatasetEmailQueue extends QueueWorkerBase
          * put back into queue, and process next time.
          */
         $nird = \Drupal::service('dataset_upload.nird_api_client');
-        \Drupal::logger('nird')->debug('queue item <pre><code>' . print_r($data, true) . '</code></pre>');
+        //\Drupal::logger('nird')->debug('queue item <pre><code>' . print_r($data, true) . '</code></pre>');
         $status = $nird->getDatasetStatus($data->dataset_id);
-        \Drupal::logger('nird')->debug('dataset_status:  <pre><code>' . print_r($status, true) . '</code></pre>');
+        //  \Drupal::logger('nird')->debug('dataset_status:  <pre><code>' . print_r($status, true) . '</code></pre>');
 
         //TEST FOR ALWAYS HAVE A DOI
         $r = rand(0, 10);

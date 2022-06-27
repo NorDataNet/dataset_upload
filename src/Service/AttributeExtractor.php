@@ -13,9 +13,9 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  */
 class AttributeExtractor
 {
-  /**
-   * Private state variables
-   */
+    /**
+     * Private state variables
+     */
 
     //Status message
     private $message;

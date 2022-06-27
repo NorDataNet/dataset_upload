@@ -40,6 +40,11 @@ function dataset_upload_mail($key, &$message, $params)
      $message['subject'] = t('Your dataset(s): @title with id @id are now published', array('@title' => $params['title'], '@id' => $params['id']), $options);
      $message['body'][] = $params['message'];
      break;
+  case 'nird_api_error':
+    $message['from'] = \Drupal::config('system.site')->get('mail');
+    $message['subject'] = t('Something went wrong while publishing dataset submitted by user @user.', array('@user' => $params['user']), $options);
+    $message['body'][] = $params['message'];
+    break;
  }
 }
 

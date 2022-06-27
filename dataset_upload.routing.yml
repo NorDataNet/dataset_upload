@@ -4,7 +4,6 @@ dataset_upload.form:
     _form: '\Drupal\dataset_upload\Form\DatasetUploadForm'
     _title: 'Dataset upload form'
   requirements:
-    #_permission: 'ALL'
     _permission: 'nordatanet upload nird'
 
 dataset_upload.admin_config_form:
@@ -27,11 +26,11 @@ system.admin_config_nordatanet:
     _permission: 'administer site configuration'
 
 
-dataset_upload.rclone:
-  path: '/dataset_upload/rclone'
-  defaults:
-    _controller: '\Drupal\dataset_upload\Controller\DatasetUploadController::rcloneTest'
-    _title: 'rclone test'
-  requirements:
+#dataset_upload.rclone:
+#  path: '/dataset_upload/rclone'
+#  defaults:
+#    _controller: '\Drupal\dataset_upload\Controller\DatasetUploadController::rcloneTest'
+#    _title: 'rclone test'
+#  requirements:
     #_permission: 'ALL'
-    _permission: 'nordatanet upload nird'
+#    _permission: 'nordatanet upload nird'

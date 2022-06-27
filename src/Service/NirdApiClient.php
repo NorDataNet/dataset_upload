@@ -4,6 +4,7 @@ namespace Drupal\dataset_upload\Service;
 
 use Drupal\Component\Serialization\Json;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use Drupal\Core\Config\ImmutableConfig;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -662,10 +663,10 @@ class NirdApiClient implements NirdApiClientInterface
                 ''
             );
         }
-
-        $response = $this->httpClient->post(
-            $this->config->get('nird_api_organization_endpoint'),
-            [
+        try {
+            $response = $this->httpClient->post(
+                $this->config->get('nird_api_organization_endpoint'),
+                [
             'base_uri' => $this->config->get('nird_api_base_uri'),
             'json' => $json,
             'http_erros' => false,
@@ -681,12 +682,40 @@ class NirdApiClient implements NirdApiClientInterface
               'Accept' => 'application/json',
             ],
           ],
-        );
-        //dpm($response->getStatusCode());
-        if ($response->getStatusCode() === 200) {
-            $contents = $this->json::decode($response->getBody()->getContents());
-            //$msg = $this->json::decode($contents);
-            return $contents;
+            );
+            //dpm($response->getStatusCode());
+            if ($response->getStatusCode() === 200) {
+                $contents = $this->json::decode($response->getBody()->getContents());
+                //$msg = $this->json::decode($contents);
+                return $contents;
+            }
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+
+            // you can catch here 400 response errors and 500 response errors
+            // You can either use logs here use Illuminate\Support\Facades\Log;
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            $response =  $e->getResponse();
+            $msg = $this->json::decode($response->getBody()->getContents());
+            $person = $json['person'];
+            if ($response->getStatusCode() === 400) {
+                if ($msg['detail'] === "Person not found") {
+                    self::createPerson(
+                        $person['firstname'],
+                        $person['lastname'],
+                        $person['email'],
+                        $person['federatedid'],
+                    );
+                    self::createOrganization($json);
+                }
+            }
+            //dpm($error);
+            return $error;
+            \Drupal::logger('dataset_upload')->error('Error occured while creating organization.', ['error' => $error]);
+        } catch (Exception $e) {
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
         }
 
         return [];
@@ -789,7 +818,7 @@ class NirdApiClient implements NirdApiClientInterface
             [
               'base_uri' => $this->config->get('nird_api_base_uri'),
               'query' => [
-                'dataset_id' => $doi,
+                'query' => $query,
               ],
               'headers' => [
                 'Authorization' => "{$this->token_type} {$this->token}",
@@ -801,7 +830,7 @@ class NirdApiClient implements NirdApiClientInterface
 
         if ($response->getStatusCode() === 200) {
             $contents = $this->json::decode($response->getBody()->getContents());
-            return $this->json::decode($contents);
+            return $contents;
         }
 
         return [];

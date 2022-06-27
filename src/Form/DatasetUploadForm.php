@@ -196,6 +196,22 @@ class DatasetUploadForm extends DatasetValidationForm
          ];
 
             $form = self::formPageFive($form, $form_state);
+            $mailManager = \Drupal::service('plugin.manager.mail');
+            $module = 'dataset_upload';
+            $key = 'nird_api_error';
+            $to = 'magnarem@met.no';
+            $params['message'] = t('Something went wrong registering the dataset\n The NIRD API JSON request was:\n' . $form_state->get('json'). '\n and the NIRD API response was:\n ' . $form_state->get('nird_error'));
+            $params['user'] = $user->getEmail();
+            //$params['json'] = $form_state->get('json');
+
+            //$params['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
+            //$params['doi'] = $data->doi;
+
+            $langcode = $user->getPreferredLangcode();
+            $send = true;
+
+            $result = $mailManager->mail($module, $key, $to, $langcode, $params, null, $send);
+            //dpm($result);
             $this->cleanUp($this->currentUser->id(), $form_state);
             return $form;
         }
@@ -215,7 +231,7 @@ class DatasetUploadForm extends DatasetValidationForm
 
         //NOT IN USE AT THE MOMENT
         if ($form_state->has('page') && $form_state->get('page') == 4) {
-            return self::formPageFour($form, $form_state);
+            return self::registerMissing($form, $form_state);
         }
 
         //Build the main dataset form for filling out metadata of the uploaded dataset(s).
@@ -280,7 +296,7 @@ class DatasetUploadForm extends DatasetValidationForm
          * RETURN USER TO USER EDIT FORM IF MISSING First and last names
          *
          */
-        if ($user->field_first_name == null || $user->field_last_name == null) {
+        if (!isset($user->field_first_name) || !isset($user->field_last_name)) {
             $form_state->setRedirect('entity.user.edit_form', $user);
         }
 
@@ -792,20 +808,20 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 '#type' => 'textfield',
 '#title' => $this
 ->t('First name'),
-'#default_value' => $user->field_first_name->value,
+'#default_value' => isset($user->field_first_name->value) ? $user->field_first_name->value : "",
 '#required' => true,
 //'#default_value' => $user->get('field_first_name'),
-'#disabled' => true,
+'#disabled' => false,
 ];
 
         $form['dataset']['depositor'][$i]['member']['lastname'] = [
 '#type' => 'textfield',
 '#title' => $this
 ->t('Last name'),
-'#default_value' => $user->field_last_name->value,
+'#default_value' => isset($user->field_last_name->value) ? $user->field_last_name->value : "",
 '#required' => true,
 //  '#default_value' => $user->get('field_last_name'),
-'#disabled' => true,
+'#disabled' => false,
 ];
         $form['dataset']['depositor'][$i]['member']['email'] = [
 '#type' => 'email',
@@ -1039,13 +1055,17 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['dataset']['data_manager'] = [
             '#type' => 'fieldset',
             '#title' => $this->t('Data manager'),
-            '#description' => $this->t('The person or organization that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
+            '#description' => $this->t('The person or institution that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
             //'#tree' => true,
             '#prefix' => '<div id="manager-wrapper">',
             '#suffix' => '</div>',
       ];
-
-        for ($i=0; $i< count($depositor_role) ; $i++) {
+        if (null != $depositor_role) {
+            $max = count($depositor_role);
+        } else {
+            $max = 1;
+        }
+        for ($i=0; $i< $max ; $i++) {
             //$managers = 2;
             if (strtolower($depositor_role[$i]) === strtolower('Data Manager') && $depositor_type[$i] === 'person') {
                 //for($i=0; $i < $managers; $i++ )
@@ -1098,6 +1118,51 @@ confirming your submission. If the metadata are not correct, cancel your submiss
               //'#required' => true
               //'#disabled' => true,
           ];
+            } elseif (strtolower($depositor_role[$i]) === strtolower('Data Manager') && ($depositor_type[$i] === 'institution' || $depositor_type[$i] === 'organization')) {
+                if (isset($depositor_name[$i])) {
+                    $exp = '/([\w\s]+)/';
+                    preg_match_all($exp, $depositor_name[$i], $matches);
+                    $longname = trim($matches[0][0]);
+                    $shortname = isset($matches[0][1]) ? $matches[0][1] : $matches[1][0];
+                //\Drupal::logger('dataset_upload_match')->debug('<pre><code>' . print_r($matches, true) . '</code></pre>');
+                } else {
+                    $shortname = '';
+                    $longname = '';
+                }
+
+                $form['dataset']['data_manager'][$i]['manager']['longname'] = [
+        '#type' => 'textfield',
+          '#title' => $this
+            ->t('Long name'),
+            '#default_value' => trim($longname),
+            //'#disabled' => true,
+            '#required' => true
+        ];
+
+                $form['dataset']['data_manager'][$i]['manager']['shortname'] = [
+          '#type' => 'textfield',
+            '#title' => $this
+              ->t('Short name'),
+              '#default_value' => trim($shortname),
+              //'#disabled' => true,
+              '#required' => true
+          ];
+                $form['dataset']['data_manager'][$i]['manager']['contactemail'] = [
+            '#type' => 'email',
+              '#title' => $this
+                ->t('Contact email'),
+                '#default_value' => trim($depositor_email[$i]),
+                //'#disabled' => true,
+                '#required' => true
+            ];
+                $form['dataset']['data_manager'][$i]['manager']['homepage'] = [
+                '#type' => 'url',
+                  '#title' => $this
+                    ->t('Homepage'),
+                    '#default_value' => trim($depositor_url[$i]),
+                  //  '#disabled' => true,
+                  '#required' => true
+                ];
             } else {
                 $form['dataset']['data_manager'][$i]['manager'] = [
               '#type' => 'fieldgroup',
@@ -1242,7 +1307,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['dataset']['rights_holder'] = [
               '#type' => 'fieldset',
               '#title' => $this->t('Rights holder'),
-              '#description' => $this->t('The rights holder  are the organization of the prinsipal investigator.'),
+              '#description' => $this->t('The rights holder  are the institution of the prinsipal investigator.'),
               //'#tree' => true,
             ];
         $form['dataset']['rights_holder']['holder'] = [
@@ -1408,7 +1473,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['dataset']['creator'] = [
     '#type' => 'fieldset',
     '#title' => $this->t('Creator(s)'),
-    '#description' => $this->t('The person or organization that created the dataset'),
+    '#description' => $this->t('The person or institution that created the dataset'),
     //'#tree' => true,
 ];
 
@@ -1460,7 +1525,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
                 $form['dataset']['creator'][$i]['creator'] = [
         '#type' => 'markup',
-        '#markup' => '<strong>Organization</strong>',
+        '#markup' => '<strong>Institution</strong>',
       ];
 
                 $form['dataset']['creator'][$i]['creator']['longname'] = [
@@ -1672,7 +1737,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //If success, redirect to form page 2
         else {
             $form_state->set('page', 2);
-            \Drupal::logger('dataset_upload')->debug('call NIRD API prefill controlled vocabulary');
+            //\Drupal::logger('dataset_upload')->debug('call NIRD API prefill controlled vocabulary');
 
 
             //Prefetch options from NIRD controlled vocabularies
@@ -1689,9 +1754,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $form_state->set('api_subjects', $this->nirdApiClient->getSubject());
 
             //Extract Metadata from datasets
-            \Drupal::logger('dataset_upload')->debug('extracting metadata');
+            //\Drupal::logger('dataset_upload')->debug('extracting metadata');
             $metadata = self::extractMetadata($form, $form_state);
-
+            //\Drupal::logger('dataset_upload')->debug('meta <pre><code>' . print_r($metadata, true) . '</code></pre>');
+            $validation_message = [];
+            if (empty($metadata)) {
+                $form_state->set('page', 1);
+                array_push($validation_message, 'Something went wrong extracting metadata.');
+                $form_state->set('validation_message', $validation_message);
+            }
             /**
              * Extract names, roles, type, emails into arrays
              * and store them in the $form_state
@@ -1717,8 +1788,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             } else {
                 $form_state->set('contributor_person_count', 1);
             }
-            if (isset($contributor_type_count['organization'])) {
-                $contributor_org_count = (int) $contributor_type_count['organization'];
+            if (isset($contributor_type_count['institution'])) {
+                $contributor_org_count = (int) $contributor_type_count['institution'];
                 $form_state->set('contributor_org_count', $contributor_org_count);
             } else {
                 $form_state->set('contributor_org_count', 0);
@@ -1750,7 +1821,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $creator_type_count = array_count_values($creator_type);
                 //\Drupal::logger('dataset_upload')->debug('depositor count <pre><code>' . print_r($depositor_type_count, true) . '</code></pre>');
                 $creator_person_count = (int) $creator_type_count['person'];
-                $creator_org_count = (int) $creator_type_count['organization'];
+                $creator_org_count = (int) $creator_type_count['institution'];
                 $form_state->set('creator_person_count', $creator_person_count);
                 $form_state->set('creator_org_count', $creator_org_count);
             }
@@ -1842,7 +1913,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
     private function extractMetadata(array &$form, FormStateInterface $form_state)
     {
         $metadata = [];
-
+        //dpm($form_state);
         $output_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location')) . '/';
         $file_path = $form_state->get('file_path');
         $filename = $form_state->get('filename');
@@ -1850,7 +1921,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //Process single file:
         if (!$form_state->has('archived_files')) {
             //$md = $this->ncToMmd->getMetadata($file_path, $filename, $output_path);
-            \Drupal::logger('dataset_upload')->debug('extracting metadata using ncdump....');
+            \Drupal::logger('dataset_upload')->debug('extracting metadata from archive using ncdump....');
             $md = $this->attributeExtractor->extractAttributes($file_path, '');
 
             //Give back the metadata in a better structure for filling out the form.
@@ -1858,18 +1929,19 @@ confirming your submission. If the metadata are not correct, cancel your submiss
       //for($i = 0; $i < count($arr); $i++) {
       //  $metadata[(string) ltrim($arr[$i][0])] = $arr[$i][1];
       //}
-      //  \Drupal::logger('dataset_upload_metadata')->debug('<pre><code>' . print_r($arr, TRUE) . '</code></pre>');
-      //\Drupal::logger('dataset_upload')->debug(implode(' ', $metadata[$filename]));
+        //\Drupal::logger('dataset_upload_metadata')->debug('<pre><code>' . print_r($md, true) . '</code></pre>');
+            //\Drupal::logger('dataset_upload')->debug(implode(' ', $metadata[$filename]));
       //dpm(array_keys($metadata));
       //dpm($metadata);
 
-      //$metadata = $md;
+            //$metadata = $md;
         }
 
         //Process archived files
         if ($form_state->has('archived_files')) {
             $archived_files = $form_state->get('archived_files');
             //Loop over the files
+            $md = [];
             foreach ($archived_files as $f) {
                 $uri = $output_path .'/' .$f;
                 $filepath = \Drupal::service('file_system')->realpath($uri);
@@ -1884,10 +1956,11 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 }
             } */
             }
+            //dpm($md);
             /**
              * TODO: Create an unique array of the metadata from all files?
              */
-            $metadata = $md[0];
+            $metadata = $md;
         }
 
         /**
@@ -1923,6 +1996,614 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
     /**
      * BUILD FORM PAGE 4
+     * Form for registering missing institutions
+     */
+    public function registerMissing(array &$form, FormStateInterface $form_state)
+    {
+        $dataset = $form_state->getValues()['dataset'];
+        $form_state->set('current_dataset', $dataset);
+        $form_state->set('current_state', $form_state);
+        //dpm($dataset);
+        /*  $form['register'] = [
+            '#type' => 'container',
+            '#tree' => true,
+          ];*/
+        //$form['register']['#tree'] = true;
+        //If data_manager institution is not registered. show form.
+        if ($form_state->has('manager_inst_failed')) {
+            $st = $form_state->get('manager_inst_failed');
+
+            if ($st) {
+                $form['register']['manager'] = [
+               '#type' => 'fieldset',
+               '#title' => $this->t('The data manager institution was not found. Please select from list or register new institution'),
+               '#discription' => $this->t('Press the choose from list radio, to see if your institution is in the list and select that institution. If not in the list. Click the register radio to register a contact person for your institution.'),
+               //'#prefix' => '<div id="publication-wrapper">',
+               //'#suffix' => '</div>',
+               '#attributes' => ['id' => 'dm-wrapper'],
+               '#tree' => true,
+             ];
+                $i=0;
+                $form['register']['manager']['dm-select'] = [
+       '#type' => 'radios',
+       '#title' => $this->t('Select from list or register new institution'),
+       //'#empty_option' => $this->t('- Select published status -'),
+
+       '#options' => ['selectlistdm' =>'Select from list', 'registerdm' => 'Register'],
+       '#default_value' => 'selectlistdm',
+       '#required' => true,
+       //'#name' => 'article-select',
+       '#attributes' => [],
+     ];
+                $query = $dataset['data_manager'][$i]['manager']['shortname'];
+                $results = $this->nirdApiClient->searchOrganization($query);
+                //  dpm($results);
+                $inst_count = (int) $results['results'];
+                $inst_arr = $results['organizations'];
+                $institutions = [];
+                $form_state->set('dm-insts', $results);
+                for ($i=0; $i < $inst_count; $i++) {
+                    $institutions[] = $inst_arr[$i]['orglongname'];
+                }
+
+                $form['register']['manager']['dmlist']  = [
+       '#type' => 'select',
+       '#title' =>  $this->t('Select your data manager institution from the list.'),
+       '#empty_option' => $this->t('- Select institution -'),
+       '#options' => $institutions,
+       //'#required' => true,
+       '#states'=> [
+         'invisible' => [
+             ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+           ],
+       'visible' => [
+           ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+         ],
+         'required' => [
+             ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+         ],
+       ],
+
+         ];
+                $form['register']['manager']['registerdm']['longname']  = [
+           '#type' => 'textfield',
+           '#title' => $this
+             ->t('Long name'),
+             '#default_value' =>   $dataset['data_manager'][0]['manager']['longname'], //Extract from metadata
+             //'#required' => true,
+             //'#disabled' => true,
+           '#states'=> [
+             'invisible' => [
+                 ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+               ],
+           'visible' => [
+               ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+             ],
+             'required' => [
+                 ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+             ],
+           ],
+
+             ];
+
+                $form['register']['manager']['registerdm']['shortname']  = [
+               '#type' => 'textfield',
+               '#title' => $this
+                 ->t('Short name'),
+                 '#default_value' =>   $dataset['data_manager'][0]['manager']['shortname'], //Extract from metadata
+                 //'#required' => true,
+                 //'#disabled' => true,
+
+               '#states'=> [
+                 'invisible' => [
+                     ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                   ],
+               'visible' => [
+                   ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                 ],
+                 'required' => [
+                     ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                 ],
+               ],
+
+                 ];
+                $form['register']['manager']['registerdm']['contactemail']  = [
+                   '#type' => 'textfield',
+                   '#title' => $this
+                     ->t('Contact email'),
+                     '#default_value' =>   $dataset['data_manager'][0]['manager']['contactemail'], //Extract from metadata
+                     //'#required' => true,
+                     //'#disabled' => true,
+
+                   '#states'=> [
+                     'invisible' => [
+                         ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                       ],
+                   'visible' => [
+                       ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                     ],
+                     'required' => [
+                         ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                     ],
+                   ],
+
+                     ];
+                $form['register']['manager']['registerdm']['homepage']  = [
+                       '#type' => 'textfield',
+                       '#title' => $this
+                         ->t('Homepage'),
+                         '#default_value' => $dataset['data_manager'][0]['manager']['homepage'], //Extract from metadata
+                         //'#required' => true,
+                         //'#disabled' => true,
+
+                       '#states'=> [
+                         'invisible' => [
+                             ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                           ],
+                       'visible' => [
+                           ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                         ],
+                         'required' => [
+                             ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                         ],
+                       ],
+
+                         ];
+
+                $form['register']['manager']['registerdm']['contact'] = [
+               '#type' => 'fieldset',
+               '#title' => $this
+                 ->t('Enter the contact person for this institution'),
+
+                 '#states'=> [
+                   'invisible' => [
+                       ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                     ],
+                 'visible' => [
+                     ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                   ],
+                   'required' => [
+                       ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                   ],
+                 ],
+
+                   ];
+                $form['register']['manager']['registerdm']['contact']['firstname']  = [
+            '#type' => 'textfield',
+            '#title' => $this
+              ->t('First name'),
+              '#default_value' => '', //Extract from metadata
+              //'#required' => true,
+              //'#disabled' => true,
+
+              '#states'=> [
+                'invisible' => [
+                    ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                  ],
+              'visible' => [
+                  ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                ],
+                'required' => [
+                    ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                ],
+              ],
+
+                ];
+                $form['register']['manager']['registerdm']['contact']['lastname']  = [
+             '#type' => 'textfield',
+             '#title' => $this
+               ->t('Last name name'),
+               '#default_value' => '', //Extract from metadata
+               //'#required' => true,
+               //'#disabled' => true,
+
+               '#states'=> [
+                 'invisible' => [
+                     ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                   ],
+               'visible' => [
+                   ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                 ],
+                 'required' => [
+                     ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                 ],
+               ],
+
+                 ];
+
+                $form['register']['manager']['registerdm']['contact']['email']  = [
+            '#type' => 'textfield',
+            '#title' => $this
+              ->t('Email'),
+              '#default_value' => '', //Extract from metadata
+              //'#required' => true,
+              //'#disabled' => true,
+
+              '#states'=> [
+                'invisible' => [
+                    ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                  ],
+              'visible' => [
+                  ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                ],
+                'required' => [
+                    ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                ],
+              ],
+
+
+
+              ];
+                $form['register']['manager']['registerdm']['contact']['federatedid']  = [
+                   '#type' => 'hidden',
+                   '#title' => $this
+                     ->t('Federaded ID'),
+                     '#default_value' => '', //Extract from metadata
+                     //'#required' => true,
+                     //'#disabled' => true,
+
+                     '#states'=> [
+                       'invisible' => [
+                           ':input[name="manager[dm-select]"]' => ['value' => 'selectlistdm'],
+                         ],
+                     'visible' => [
+                         ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                       ],
+                       'required' => [
+                           ':input[name="manager[dm-select]"]' => ['value' => 'registerdm'],
+                       ],
+                     ],
+
+                       ];
+            }
+        }
+        //If rights_holder institution is not registered. show form.
+        if ($form_state->has('holder_inst_failed')) {
+            $st = $form_state->get('holder_inst_failed');
+            if ($st) {
+                $form['register']['holder'] = [
+               '#type' => 'fieldset',
+               '#title' => $this->t('The rights holder institution was not found. Please select from list or register new institution'),
+               '#description' => $this->t('Press the choose from list radio, to see if your institution is in the list and select that institution. If not in the list. Click the register radio to register a contact person for your institution.'),
+               //'#prefix' => '<div id="publication-wrapper">',
+               //'#suffix' => '</div>',
+               '#attributes' => ['id' => 'rh-wrapper'],
+               '#tree' => true,
+             ];
+
+                $form['register']['holder']['rh-select'] = [
+       '#type' => 'radios',
+       '#title' => $this->t('Select from list or register new institution'),
+       //'#empty_option' => $this->t('- Select published status -'),
+
+       '#options' => ['selectlistrh' =>'Select from list', 'registerrh' => 'Register'],
+       '#default_value' => 'selectlistrh',
+       '#required' => true,
+       //'#name' => 'article-select',
+       //'#attributes' => [],
+     ];
+
+                $query = $dataset['rights_holder']['holder']['shortname'];
+                $results = $this->nirdApiClient->searchOrganization($query);
+                //dpm($results);
+                $inst_count = (int) $results['results'];
+                $inst_arr = $results['organizations'];
+                $institutions = [];
+                for ($i=0; $i < $inst_count; $i++) {
+                    $institutions[] = $inst_arr[$i]['orglongname'];
+                }
+                //dpm($institutions);
+                $form_state->set('rh-insts', $results);
+                $form['register']['holder']['rhlist']  = [
+       '#type' => 'select',
+       '#title' =>  $this->t('Select your rights holder institution from the list.'),
+       //'#required' => true,
+       '#empty_option' => $this->t('- Select institution -'),
+       '#options' => $institutions,
+       '#states' => [
+         'invisible' => [
+             //':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+           ],
+       'visible' => [
+           ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+         ],
+         'required' => [
+             ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+         ],
+       ],
+
+         ];
+                $form['register']['holder']['registerrh']['longname']  = [
+           '#type' => 'textfield',
+           '#title' => $this
+             ->t('Long name'),
+             '#default_value' => $dataset['rights_holder']['holder']['longname'], //Extract from metadata
+             //'#required' => true,
+             //'#disabled' => true,
+
+           '#states'=> [
+             'invisible' => [
+                 ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+               ],
+           'visible' => [
+               ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+             ],
+             'required' => [
+                 ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+             ],
+           ],
+
+             ];
+
+                $form['register']['holder']['registerrh']['shortname']  = [
+               '#type' => 'textfield',
+               '#title' => $this
+                 ->t('Short name'),
+                 '#default_value' => $dataset['rights_holder']['holder']['shortname'], //Extract from metadata
+                 //'#required' => true,
+                 //'#disabled' => true,
+
+               '#states'=> [
+                 'invisible' => [
+                     ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                   ],
+               'visible' => [
+                   ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                 ],
+                 'required' => [
+                     ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                 ],
+               ],
+
+                 ];
+                $form['register']['holder']['registerrh']['contactemail']  = [
+                   '#type' => 'textfield',
+                   '#title' => $this
+                     ->t('Contact email'),
+                     '#default_value' => $dataset['rights_holder']['holder']['contactemail'], //Extract from metadata
+                     //'#required' => true,
+                     //'#disabled' => true,
+
+                   '#states'=> [
+                     'invisible' => [
+                         ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                       ],
+                   'visible' => [
+                       ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                     ],
+                     'required' => [
+                         ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                     ],
+                   ],
+
+                     ];
+                $form['register']['holder']['registerrh']['homepage']  = [
+                       '#type' => 'textfield',
+                       '#title' => $this
+                         ->t('Homepage'),
+                         '#default_value' => $dataset['rights_holder']['holder']['homepage'], //Extract from metadata
+                         //'#required' => true,
+                         //'#disabled' => true,
+
+                       '#states'=> [
+                         'invisible' => [
+                             ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                           ],
+                       'visible' => [
+                           ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                         ],
+                         'required' => [
+                             ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                         ],
+                       ],
+
+                     ];
+                $form['register']['holder']['registerrh']['contact'] = [
+                    '#type' => 'fieldset',
+                    '#title' => $this
+                      ->t('Enter the contact person for this institution'),
+
+                    '#states'=> [
+                      'invisible' => [
+                          ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                        ],
+                    'visible' => [
+                        ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                      ],
+                      'required' => [
+                          ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                      ],
+                    ],
+
+                  ];
+                $form['register']['holder']['registerrh']['contact']['firstname']  = [
+                 '#type' => 'textfield',
+                 '#title' => $this
+                   ->t('First name'),
+                   '#default_value' => '', //Extract from metadata
+                   //'#required' => true,
+                   //'#disabled' => true,
+
+                 '#states'=> [
+                   'invisible' => [
+                       ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                     ],
+                 'visible' => [
+                     ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                   ],
+                   'required' => [
+                       ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                   ],
+                 ],
+
+                   ];
+
+                $form['register']['holder']['registerrh']['contact']['lastname']  = [
+                  '#type' => 'textfield',
+                  '#title' => $this
+                    ->t('Last name name'),
+                    '#default_value' => '', //Extract from metadata
+                    //'#required' => true,
+                    //'#disabled' => true,
+
+                  '#states'=> [
+                    'invisible' => [
+                        ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                      ],
+                  'visible' => [
+                      ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                    ],
+                    'required' => [
+                        ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                    ],
+                  ],
+
+                    ];
+
+                $form['register']['holder']['registerrh']['contact']['email']  = [
+                 '#type' => 'textfield',
+                 '#title' => $this
+                   ->t('Email'),
+                   '#default_value' => '', //Extract from metadata
+                   //'#required' => true,
+                   //'#disabled' => true,
+
+                 '#states'=> [
+                   'invisible' => [
+                       ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                     ],
+                 'visible' => [
+                     ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                   ],
+                   'required' => [
+                       ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                   ],
+                 ],
+
+                   ];
+                $form['register']['holder']['registerrh']['contact']['federatedid']  = [
+                        '#type' => 'hidden',
+                        '#title' => $this
+                          ->t('Federaded ID'),
+                          '#default_value' => '', //Extract from metadata
+                          //'#required' => true,
+                          //'#disabled' => true,
+
+                        '#states'=> [
+                          'invisible' => [
+                              ':input[name="holder[rh-select]"]' => ['value' => 'selectlistrh'],
+                            ],
+                        'visible' => [
+                            ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                          ],
+                          'required' => [
+                              ':input[name="holder[rh-select]"]' => ['value' => 'registerrh'],
+                          ],
+                        ],
+
+                      ];
+            }
+        }
+        /**
+        * submit actions
+        */
+        $form['actions'] = [
+    '#type' => 'actions',
+   ];
+
+        $form['actions']['submit'] = array(
+   '#type' => 'submit',
+   '#button_type' => 'primary',
+   '#value' => $this->t('Confirm and continue.'),
+   '#validate' => ['::validateINST'],
+   //'#submit' => ['::confirmNIRD'],
+   );
+
+        $form['actions']['cancel'] = array(
+   '#type' => 'submit',
+   '#value' =>  $this->t('Cancel submission'),
+   '#submit' => ['::cancelSubmission'],
+   '#limit_validation_errors' => [],
+   );
+
+        //dpm($form);
+        //dpm($form_state->getValues());
+        return $form;
+    }
+
+    //Validate and register the entered institutions
+    public function validateINST(array &$form, FormStateInterface  $form_state)
+    {
+        //Get all form values.
+        $dataset = $form_state->getValues();
+        //dpm($dataset);
+
+        //Save the input values of this form for later.
+        $form_state->set('inst_reg', $dataset);
+        //Proecess Data Manager Institution
+        if (array_key_exists('manager', $dataset)) {
+            $select  = $dataset['manager']['dm-select'];
+            if ($select === 'selectlistdm') {
+                $form_state->set('selected_dm', $dataset['manager']['dmlist']);
+            }
+            if ($select === 'registerdm') {
+                $form_state->set('registered_dm', $dataset['manager']['registerdm']);
+                $manager = $dataset['manager']['registerdm'];
+                $req_obj = [
+                'person' => [
+                  'firstname' =>  $manager['contact']['firstname'],
+                  'lastname' =>  $manager['contact']['lastname'],
+                  'email' =>  $manager['contact']['email'],
+                  'federatedid' =>  $manager['contact']['federatedid'],
+                ],
+                'organization' => [
+                    'longname' => $manager['longname'],
+                    'shortname' => $manager['shortname'],
+                    'contactemail' => $manager['contactemail'],
+                    'homepage' => $manager['homepage'],
+
+                ],
+              ];
+                $statusdm = $this->nirdApiClient->createOrganization($req_obj);
+                //dpm($statusdm);
+            }
+        }
+
+
+        //Process Rights Holder Institution
+        if (array_key_exists('holder', $dataset)) {
+            $select  = $dataset['holder']['rh-select'];
+            if ($select === 'selectlistrh') {
+                $form_state->set('selected_rh', $dataset['holder']['rhlist']);
+            }
+
+            if ($select === 'registerrh') {
+                $form_state->set('registered_rh', $dataset['holder']['registerrh']);
+                $holder = $dataset['holder']['registerrh'];
+                $req_obj = [
+                'person' => [
+                  'firstname' =>  $holder['contact']['firstname'],
+                  'lastname' =>  $holder['contact']['lastname'],
+                  'email' =>  $holder['contact']['email'],
+                  'federatedid' =>  $holder['contact']['federatedid'],
+                ],
+                'organization' => [
+                    'longname' => $holder['longname'],
+                    'shortname' => $holder['shortname'],
+                    'contactemail' => $holder['contactemail'],
+                    'homepage' => $holder['homepage'],
+
+                ],
+              ];
+                $statusrh = $this->nirdApiClient->createOrganization($req_obj);
+                //dpm($statusrh);
+            }
+        }
+    }
+
+    /**
+     * final form to show when registration is finished
      */
 
     public function registrationConfirmedForm(array &$form, FormStateInterface $form_state)
@@ -1930,23 +2611,39 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['registration-message'] = [
     '#type' => 'markup',
     '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
-    '#markup' => '<span>Your dataset was succesfully registerd with id <strong>'.$form_state->get('dataset_id').'</strong>.</span>',
+    '#markup' => '<span>Your dataset was successfully registerd with id <strong>'.$form_state->get('dataset_id').'</strong>. You will get an email when the dataset are published and uploaded to the archive.</span>',
     '#suffix' => '</div>',
     '#allowed_tags' => ['div', 'span','strong'],
   ];
-        $yaml = $form_state->get('yaml_file');
-        $form['services-yaml'] = [
-        '#type' => 'textarea',
-        '#title' => 'dataset services config yaml',
-        '#value' => Yaml::encode($yaml),
-      ];
+        /*  $yaml = $form_state->get('yaml_file');
+          $form['services-yaml'] = [
+          '#type' => 'textarea',
+          '#title' => 'dataset services config yaml',
+          '#value' => Yaml::encode($yaml),
+        ];
 
-        $form['json'] = [
-      '#type' => 'textarea',
-      '#title' => 'Dataset registration summary as JSON object',
-      '#default_value' => $form_state->get('json'),
-    ];
+          $form['json'] = [
+        '#type' => 'textarea',
+        '#title' => 'Dataset registration summary as JSON object',
+        '#default_value' => $form_state->get('json'),
+    ];*/
+
+        $form['another'] = [
+  '#type' => 'submit',
+  '#value' => $this->t('Upload and register another dataset'),
+  '#submit' => ['::another'],
+  '#limit_validation_errors' => [],
+];
+
+
         return $form;
+    }
+
+
+    //Reupload another dataset.
+    public function another(array &$form, FormStateInterface $form_state)
+    {
+        $form_state->setRedirect('dataset_upload.form');
     }
 
     /**
@@ -2042,8 +2739,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $form['actions']['cancel'] = array(
       '#type' => 'submit',
       '#value' => $this->t('Cancel submission'),
-      '#submit' => ['::cancelSubmission'],
-      '#limit_validation_errors' => [],
+        '#submit' => ['::cancelSubmission'],
+        '#limit_validation_errors' => [],
       );
 
 
@@ -2100,9 +2797,13 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //Get all form values.
         $dataset = $form_state->getValues()['dataset'];
         $dataset['subject'] =  $form_state->get('subjects_added');
+        $form_state->set('current_dataset', $dataset);
         $depositors = count($dataset['depositor']);
         //\Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $depositors);
         $creators = count($dataset['creator']);
+
+        $holders = 1;
+        $managers = count($dataset['data_manager']);
         //\Drupal::logger('dataset_upload_validate_dataset')->debug('validation depositors: ' . $creators);
         //\Drupal::logger('dataset_upload_validate_dataset')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
 
@@ -2118,7 +2819,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                     $dataset['depositor'][$i]['member']['federatedid']
                 );
                 if (!(bool) $depositor['registered']) {
-                    \Drupal::logger('dataset_upload')->error('depositor not registered...trying to register.');
+                    //\Drupal::logger('dataset_upload')->error('depositor not registered...trying to register.');
                     //$form_state->setErrorByName('dataset][depositor][member',"depositor not registered");
                     $depositor = $this->nirdApiClient->createPerson(
                         $dataset['depositor'][$i]['member']['firstname'],
@@ -2126,7 +2827,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                         $dataset['depositor'][$i]['member']['email'],
                         $dataset['depositor'][$i]['member']['federatedid']
                     );
-                    \Drupal::logger('dataset_upload')->debug('depositor registered');
+                //\Drupal::logger('dataset_upload')->debug('depositor registered? ' . $depositor['registered']);
                 } else {
                     \Drupal::logger('dataset_upload')->debug('depositor registered');
                 }
@@ -2135,25 +2836,57 @@ confirming your submission. If the metadata are not correct, cancel your submiss
              * Validate data manager using Find Organization API Callback
              */
             $i = 0;
-            $data_manger = $this->nirdApiClient->findPerson(
-                $dataset['data_manager'][$i]['manager']['firstname'],
-                $dataset['data_manager'][$i]['manager']['lastname'],
-                $dataset['data_manager'][$i]['manager']['email'],
-                $dataset['data_manager'][$i]['manager']['federatedid']
-            );
-            if (!(bool) $data_manger['registered']) {
-                \Drupal::logger('dataset_upload')->error('data_manger not registered...trying to register.');
-                //$form_state->setErrorByName('dataset][data_manger][member',"data_manger not registered");
-                $data_manger = $this->nirdApiClient->createPerson(
+            $manager = $dataset['data_manager'][$i]['manager'];
+            if (array_key_exists('firstname', $manager)) {
+                $data_manger = $this->nirdApiClient->findPerson(
                     $dataset['data_manager'][$i]['manager']['firstname'],
                     $dataset['data_manager'][$i]['manager']['lastname'],
                     $dataset['data_manager'][$i]['manager']['email'],
                     $dataset['data_manager'][$i]['manager']['federatedid']
                 );
-                \Drupal::logger('dataset_upload')->debug('data_manger registered');
-            } else {
-                \Drupal::logger('dataset_upload')->debug('data_manger registered');
+                if (!(bool) $data_manger['registered']) {
+                    //\Drupal::logger('dataset_upload')->error('data_manger not registered...trying to register.');
+                    //$form_state->setErrorByName('dataset][data_manger][member',"data_manger not registered");
+                    $data_manger = $this->nirdApiClient->createPerson(
+                        $dataset['data_manager'][$i]['manager']['firstname'],
+                        $dataset['data_manager'][$i]['manager']['lastname'],
+                        $dataset['data_manager'][$i]['manager']['email'],
+                        $dataset['data_manager'][$i]['manager']['federatedid']
+                    );
+                //\Drupal::logger('dataset_upload')->debug('data_manger registered');
+                } else {
+                    \Drupal::logger('dataset_upload')->debug('data_manger registered');
+                }
             }
+
+            if (array_key_exists('longname', $manager)) {
+                $data_manger = $this->nirdApiClient->findOrganization(
+                    $dataset['data_manager'][$i]['manager']['longname'],
+                    $dataset['data_manager'][$i]['manager']['shortname'],
+                    $dataset['data_manager'][$i]['manager']['contactemail'],
+                    $dataset['data_manager'][$i]['manager']['homepage']
+                );
+                if (!(bool) $data_manger['registered']) {
+                    //\Drupal::logger('dataset_upload')->error('data_manger not registered...trying to register.');
+                    //$form_state->setErrorByName('dataset][data_manger][member',"data_manger not registered");
+                    /*    $data_manger = $this->nirdApiClient->createOrganization(
+                            $dataset['data_manager'][$i]['manager']['longname'],
+                            $dataset['data_manager'][$i]['manager']['shortname'],
+                            $dataset['data_manager'][$i]['manager']['contactemail'],
+                            $dataset['data_manager'][$i]['manager']['homepage']
+                        );
+                        \Drupal::logger('dataset_upload')->debug('data_manger institution registered status <pre><code>' . print_r($data_manger, true) . '</code></pre>');
+                        if (!(bool) $data_manger['registered']) {*/
+                    $form_state->set('manager_inst_failed', true);
+                    $form_state->set('page', 4);
+                    $form_state->setRebuild();
+                //\Drupal::logger('dataset_upload')->debug('data_manger registered');
+                    //}
+                } else {
+                    \Drupal::logger('dataset_upload')->debug('data_manger registered');
+                }
+            }
+
 
             /*        $json = [
                'person' => $dataset['rights_holder']['person'],
@@ -2168,33 +2901,36 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
 
             if (!(bool) $rights_holder['registered']) {
-                \Drupal::logger('dataset_upload')->error('rights_holder not registered...trying to register.');
-            //$form_state->setErrorByName('dataset][data_manager][manager',"Data manager not registered");
-          /*      $holder_person = $this->nirdApiClient->findPerson(
-                    $dataset['rights_holder']['person']['firstname'],
-                    $dataset['rights_holder']['person']['lastname'],
-                    $dataset['rights_holder']['person']['email'],
-                    $dataset['rights_holder']['person']['federatedid']
-                );
-                if (!(bool) $holder_person['registered']) {
-                    $holder_person = $this->nirdApiClient->createPerson(
-                        $dataset['rights_holder']['person']['firstname'],
-                        $dataset['rights_holder']['person']['lastname'],
-                        $dataset['rights_holder']['person']['email'],
-                        $dataset['rights_holder']['person']['federatedid']
-                    );
+                //\Drupal::logger('dataset_upload')->error('rights_holder not registered...');
+                //$form_state->setErrorByName('dataset][data_manager][manager',"Data manager not registered");
+                /*      $holder_person = $this->nirdApiClient->findPerson(
+                          $dataset['rights_holder']['person']['firstname'],
+                          $dataset['rights_holder']['person']['lastname'],
+                          $dataset['rights_holder']['person']['email'],
+                          $dataset['rights_holder']['person']['federatedid']
+                      );
+                      if (!(bool) $holder_person['registered']) {
+                          $holder_person = $this->nirdApiClient->createPerson(
+                              $dataset['rights_holder']['person']['firstname'],
+                              $dataset['rights_holder']['person']['lastname'],
+                              $dataset['rights_holder']['person']['email'],
+                              $dataset['rights_holder']['person']['federatedid']
+                          );
 
-                    \Drupal::logger('dataset_upload')->debug('rights holder person registered');
-                } else {
-                    \Drupal::logger('dataset_upload')->debug('rights holder person registered');
-                }
-                $rights_holder = $this->nirdApiClient->createOrganization(
-                  $dataset['rights_holder']['holder']
-                    //$json
-                );
-                \Drupal::logger('dataset_upload')->debug('rights_holder registered');
-                \Drupal::logger('dataset_upload_validate')->debug('<pre><code>' . print_r($rights_holder, true) . '</code></pre>');
+                          \Drupal::logger('dataset_upload')->debug('rights holder person registered');
+                      } else {
+                          \Drupal::logger('dataset_upload')->debug('rights holder person registered');
+                      }
+                      $rights_holder = $this->nirdApiClient->createOrganization(
+                        $dataset['rights_holder']['holder']
+                          //$json
+                      );
+                      \Drupal::logger('dataset_upload')->debug('rights_holder registered');
+                      \Drupal::logger('dataset_upload_validate')->debug('<pre><code>' . print_r($rights_holder, true) . '</code></pre>');
 */
+                $form_state->set('holder_inst_failed', true);
+                $form_state->set('page', 4);
+                $form_state->setRebuild();
             }
             //}
             else {
@@ -2236,15 +2972,26 @@ confirming your submission. If the metadata are not correct, cancel your submiss
    */
     public function submitForm(array &$form, FormStateInterface $form_state)
     {
-        //\Drupal::messenger()->addMessage(t("Confirm final. Contact NIRD API and upload."));
+        //\Drupal::messenger()->addMessage(t("Final submitform"));
         $form_state->set('page', 6);
-
+        //dpm($form_state);
         //Check services selected and create services config file.
         $session = \Drupal::request()->getSession();
         $upload_path = $session->get('upload_path');
         $user_id = $this->currentUser->id();
 
         $dataset = $form_state->getValues()['dataset'];
+
+        //Do some processing if we created or selected data manager or rights holder institutions
+        if (is_null($dataset)) {
+            //\Drupal::logger("Warning dataset empty..get from formstate");
+            $dataset = $form_state->get('current_dataset');
+            //$register =
+            //$form_state = $form_state->get('current_state');
+        }
+
+        //dpm($form_state);
+
         //\Drupal::logger('dataset_upload_dataset_before')->debug('<pre><code>' . print_r($dataset, true) . '</code></pre>');
 
         /**
@@ -2267,8 +3014,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $depositor = $dataset['depositor'];
         unset($dataset['rights_holder']['person']);
         $holder = $dataset['rights_holder'];
-        //$published = (int) $article['publication']['published'];
-        $published  = $form_state->getValue(['dataset','article','publication','article-select']);
+        $published = $article['publication']['article-select'];
+        //$published  = $form_state->getValue(['dataset','article','publication','article-select']);
         //dpm($published);
         if ($published === 'published') {
             unset($article['publication']['article-select']);
@@ -2315,25 +3062,26 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                     array_push($manager_new, $obj);
                 }
             }*/
-        //Rights holder
-        //$holder = [];
-        //array_push($holder,$dataset['rights_holder']['holder']['person']);
-        //$dataset['rights_holder']['holder']['person']['lastname'],
-        //$dataset['rights_holder']['holder']['person']['email'],
-        //$dataset['rights_holder']['holder']['person']['federatedid']]
-        //); //[ (object) [ 'holder' => $dataset['rights_holder']['holder']]]; //,
-        //array_push($holder,$dataset['rights_holder']['holder']['organization']);
-        //$dataset['rights_holder']['holder']['organization']['shortname'],
-        //$dataset['rights_holder']['holder']['organization']['contactemail'],
-        //$dataset['rights_holder']['holder']['organization']['homepage']]); //[ (object) [ 'holder' => $dataset['rights_holder']['holder']]]; //,
+        /*
+                //Rights holder
+                //$holder = [];
+                //array_push($holder,$dataset['rights_holder']['holder']['person']);
+                //$dataset['rights_holder']['holder']['person']['lastname'],
+                //$dataset['rights_holder']['holder']['person']['email'],
+                //$dataset['rights_holder']['holder']['person']['federatedid']]
+                //); //[ (object) [ 'holder' => $dataset['rights_holder']['holder']]]; //,
+                //array_push($holder,$dataset['rights_holder']['holder']['organization']);
+                //$dataset['rights_holder']['holder']['organization']['shortname'],
+                //$dataset['rights_holder']['holder']['organization']['contactemail'],
+                //$dataset['rights_holder']['holder']['organization']['homepage']]); //[ (object) [ 'holder' => $dataset['rights_holder']['holder']]]; //,
 
-        //( object)[ 'holder' => $dataset['rights_holder']['holder']['organization']]];
-
+                //( object)[ 'holder' => $dataset['rights_holder']['holder']['organization']]];
+        */
         //Creator
         $creator = $dataset['creator'];
 
         //Subject
-        //$subject = $dataset['subject'];
+        $subject = $dataset['subject'];
 
         //FOR testing
         /*  $subject = (object) [
@@ -2342,7 +3090,11 @@ confirming your submission. If the metadata are not correct, cancel your submiss
              'subfield' => 'Astrophysics'
            ];
            */
-        $dataset['created'] = $form_state->getValue(['dataset','created']); //->format('Y-m-d');
+        $created = $dataset['created'];
+        $dataset['created'] = $dataset['created'];
+
+        //$dataset['created'] = $form_state->getValue(['dataset','created']);
+        //$dataset['created'] = $form_state->getValue(['dataset','created']); //->format('Y-m-d');
         $dataset['category'] = [[
           'name' => $category,
         ]];
@@ -2364,8 +3116,57 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
 
         //$dataset['data_manager'] = $manager; //_new;
+        if ($form_state->has('selected_rh')) {
+            $rht = $form_state->get('rh-insts');
+            $idx = $form_state->get('selected_rh');
+            $rh = $rht['organizations'][$idx];
+            $dataset['rights_holder'] = [
+            'holder' => [
+              'longname' => $rh['orglongname'],
+              'shortname' => $rh['orgshortname'],
+              'contactemail' => $rh['contactemail'],
+              'homepage' => $rh['homepage'],
+            ],
+        ];
+        } elseif ($form_state->has('registered_rh')) {
+            $inst = $form_state->get('registered_rh');
+            $dataset['rights_holder'] = [
+            'holder' => [
+              'longname' => $inst['longname'],
+              'shortname' => $inst['shortname'],
+              'contactemail' => $inst['contactemail'],
+              'homepage' => $inst['homepage'],
+            ],
+        ];
+        } else {
+            $dataset['rights_holder'] = $holder;
+        }
 
-        $dataset['rights_holder'] = $holder;
+        if ($form_state->has('selected_dm')) {
+            $dmt = $form_state->get('dm-insts');
+            $idx = $form_state->get('selected_dm');
+            $dm = $dmt['organizations'][$idx];
+            $dataset['data_manager'] = [[
+            'manager' => [
+              'longname' => $dm['orglongname'],
+              'shortname' => $dm['orgshortname'],
+              'contactemail' => $dm['contactemail'],
+              'homepage' => $dm['homepage'],
+            ]],
+        ];
+        } elseif ($form_state->has('registered_dm')) {
+            $inst = $form_state->get('registered_dm');
+            $dataset['data_manager'] = [
+        'holder' => [
+          'longname' => $inst['longname'],
+          'shortname' => $inst['shortname'],
+          'contactemail' => $inst['contactemail'],
+          'homepage' => $inst['homepage'],
+        ],
+    ];
+        } else {
+        }
+
         //  'holder' =>$h
         //];
 
@@ -2374,7 +3175,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         /**
          * TODO: Maybe have some extra check if the lists are selected but no subject added to array.
           */
-        $dataset['subject'] =  $form_state->get('subjects_added');
+        if ($form_state->has('subjects_added')) {
+            $dataset['subject'] =  $form_state->get('subjects_added');
+        } else {
+            $dataset['subject'] = [[
+                'domain' => $subject['domain'],
+                'field' => $subject['field'],
+                'subfield' => $subject['subfield'],
+            ]];
+        }
         /*[
           $subject
         ];*/
@@ -2394,7 +3203,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         */
         //$result = '';
         $result = $this->nirdApiClient->createDataset($dataset);
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($result, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($result, true) . '</code></pre>');
         $form_state->set('dataset_response', Json::encode($result));
         $form_state->set('dataset', $dataset);
         //Store the given dataset_id for success
@@ -2430,8 +3239,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             //dpm($filename);
             $mime_type = $file->getMimeType();
             if ($mime_type === 'application/x-netcdf') {
-                $md5sum = md5_file($base_path.'/'.$filename);
-                file_put_contents($base_path.'/'.$filename.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+                //$md5sum = md5_file($base_path.'/'.$filename);
+                //file_put_contents($base_path.'/'.$filename.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
             } else {
                 $file->delete(); //Delete the uploaded archive after extraction
             }
@@ -2504,7 +3313,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
     private static function cleanUp($user_id, $form_state)
     {
-        \Drupal::logger('dataset_upload')->debug("Clean up session variables and files.");
+        //\Drupal::logger('dataset_upload')->debug("Clean up session variables and files.");
         $session = \Drupal::request()->getSession();
         if ($form_state->has('upload_fid')) {
             $fid = $form_state->get('upload_fid');
@@ -2574,6 +3383,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         if ($session->has('token_type')) {
             $session->remove('token_type');
         }
+        //$form_state->cach
     }
 
     /**
@@ -2633,7 +3443,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $user_id = $this->currentUser->id();
         $base_path = \Drupal::service('file_system')->realpath($form_state->get('upload_location'));
         $agg_var = $form_state->getValue('aggregation');
-        \Drupal::logger('dataset_upload')->debug($form_state->getValue('aggregation'));
+        //\Drupal::logger('dataset_upload')->debug($form_state->getValue('aggregation'));
         $archived_files = $form_state->get('agg_files');
         //dpm($archived_files);
         //\Drupal::messenger()->addMessage($archived_files);
@@ -2649,8 +3459,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 file_put_contents($base_path. '/' .$file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
                 */
                 $files_to_agg .= $file.' ';
-                $md5sum = md5_file($file);
-                file_put_contents($file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+                //$md5sum = md5_file($file);
+                //file_put_contents($file.'.md5', $md5sum, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
             }
 
             //Call the aggregation checker service

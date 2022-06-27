@@ -1,2 +1,6 @@
 nordatanet upload nird:
   title: 'Access NorDataNet NIRD dataset upload and registration'
+  description: "Upload and register dataset on the NIRD Archive"
+  #dependencies:
+  #  config:
+  #    - dataset_upload.settings
