@@ -829,7 +829,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 ->t('Email'),
 '#default_value' => $this->currentUser->getEmail(),
 '#required' => true,
-'#disabled' => true,
+'#disabled' => false,
 ];
         $form['dataset']['depositor'][$i]['member']['federatedid'] = [
 '#type' => 'hidden',
