@@ -813,9 +813,9 @@ class NirdApiClient implements NirdApiClientInterface
             );
         }
         try {
-        $response = $this->httpClient->get(
-            $this->config->get('nird_api_search_org_endpoint'),
-            [
+            $response = $this->httpClient->get(
+                $this->config->get('nird_api_search_org_endpoint'),
+                [
               'base_uri' => $this->config->get('nird_api_base_uri'),
               'query' => [
                 'query' => $query,
@@ -826,32 +826,33 @@ class NirdApiClient implements NirdApiClientInterface
                 'Accept' => 'application/json',
               ],
             ],
-        );
+            );
 
-        if ($response->getStatusCode() === 200) {
-            $contents = $this->json::decode($response->getBody()->getContents());
-            return $contents;
-        }
-      } catch (\GuzzleHttp\Exception\RequestException $e) {
+            if ($response->getStatusCode() === 200) {
+                $contents = $this->json::decode($response->getBody()->getContents());
+                return $contents;
+            }
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
 
           // you can catch here 400 response errors and 500 response errors
-          // You can either use logs here use Illuminate\Support\Facades\Log;
-          $error['error'] = $e->getMessage();
-          $error['request'] = $e->getRequest();
-          $response =  $e->getResponse();
-          $msg = $this->json::decode($response->getBody()->getContents());
-          if ($response->getStatusCode() === 404) {
-              if ($msg['detail'] === "Not Found") {
-                  return [];
-          }
-          //dpm($error);
-          return $error;
-          \Drupal::logger('dataset_upload')->error('Error occured while creating organization.', ['error' => $error]);
-      } catch (Exception $e) {
-          $error['error'] = $e->getMessage();
-          $error['request'] = $e->getRequest();
-          return $error;
-      }
+            // You can either use logs here use Illuminate\Support\Facades\Log;
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            $response =  $e->getResponse();
+            $msg = $this->json::decode($response->getBody()->getContents());
+            if ($response->getStatusCode() === 404) {
+                if ($msg['detail'] === "Not Found") {
+                    return [];
+                }
+                //dpm($error);
+                return $error;
+            }
+            \Drupal::logger('dataset_upload')->error('Error occured while creating organization.', ['error' => $error]);
+        } catch (Exception $e) {
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+        }
         return [];
     }
 }
