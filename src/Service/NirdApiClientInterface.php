@@ -210,4 +210,27 @@ interface NirdApiClientInterface
      * @return array
      */
     public function searchOrganization(string $query): array;
+
+
+    /**
+     * Ingest dataset
+     *
+     * @param array $json
+     *
+     * @return string
+     */
+    public function ingestDataset(array $json): array;
+
+
+    /**
+     * End point to get the mounted root path.
+     *
+     * Parameters: current_user(dict): Dictionary of the user.
+     *
+     * Results: result(JSON): The resulting root path.
+     *
+     *
+     * @return string
+     */
+    public function getIngestRootPath(): array;
 }

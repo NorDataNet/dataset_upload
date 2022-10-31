@@ -266,11 +266,13 @@ class DatasetUploadForm extends DatasetValidationForm
         $form_state->set('page', 1);
         //Set the upload path
         $form_state->set('upload_basepath', 'private://dataset_upload_folder/');
+        $form_state->set('tests', ['cf' => 'cf:1.6', 'acdd' => 'acdd']);
         //Get the upload valitation form
         $form = parent::buildForm($form, $form_state);
 
         //Empty the tests (ie. invoke manual)
         $form['container']['creation']['test'] = []; //[
+        $form['container']['creation']['cfversion'] = []; //remove version of cf to test
 
         $form['container']['message'] = [
           '#prefix' => '<div class="w3-card">',
@@ -1725,7 +1727,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $session = \Drupal::request()->getSession();
         //Call the validation function from the parent DatasetValidationForm
     $form_state->set('keep_file', 1); //do not delete uploaded dataset after compliance checker validation
-    $form_state->set('tests', ['cf:1.6' => 1, 'acdd' => 1]); //Override the tests to be used in compliance checker
+    $form_state->set('tests_override', ['cf' => 'cf:1.6', 'acdd' => 'acdd']); //Override the tests to be used in compliance checker
       //\Drupal::logger('dataset_upload')->debug('calling parent validate');
         parent::validate($form, $form_state);
         //\Drupal::logger('dataset_upload')->debug('finished parent validate');
@@ -3262,14 +3264,15 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             file_put_contents($yaml_filepath, $yml, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
 
             //Write manifest to disk
-            file_put_contents($dest_path .'/MANIFEST', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
+            //file_put_contents($dest_path .'/MANIFEST', $manifest, \Drupal\Core\File\FileSystemInterface::EXISTS_REPLACE);
 
 
             //$yaml_file = file_save_data(Yaml::dump($yaml), $yaml_filepath, FileSystemInterface::EXISTS_REPLACE);
             //$yaml_file->save();
             $form_state->set('yaml_file', $yaml);
             $session->set('dataset_upload_status', 'registered');
-
+            $rootPath = $this->nirdApiClient->getIngestRootPath()['root_path'];
+            //dpm($rootPath);
             /** Add dataset to custom QueueWorker */
             $queue = \Drupal::service('queue')->get('nird_upload_queue');
             $item = new \stdClass();
@@ -3279,7 +3282,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $item->path =  \Drupal::service('file_system')->realpath($dest_path);
             $item->doi = null;
             $item->title = $dataset['title'];
-
+            $item->root_path = $rootPath;
             // Add the file id to queue item if the file is a sigle netCDF
             if ($file->getMimeType() === 'application/x-netcdf') {
                 $item->fid = $file_id;

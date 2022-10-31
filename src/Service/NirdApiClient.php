@@ -855,4 +855,114 @@ class NirdApiClient implements NirdApiClientInterface
         }
         return [];
     }
+
+    public function ingestDataset(array $json): array
+    {
+        if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
+        //$json = $this->json::encode($dataset);
+
+        //var_dump($json);
+        $endpoint = $this->config->get('nird_api_ingest_dataset_endpoint');
+        try {
+            $response = $this->httpClient->post(
+                $this->config->get('nird_api_ingest_dataset_endpoint'),
+                [
+      'base_uri' => $this->config->get('nird_api_base_uri'),
+      'json' => $json,
+      'http_erros' => false,
+      'headers' => [
+        'Authorization' => "{$this->token_type} {$this->token}",
+        'Content-Type' => "application/json",
+        'Accept' => 'application/json',
+      ],
+    ]
+            );
+
+            if ($response->getStatusCode() === 200) {
+                $contents = $this->json::decode($response->getBody()->getContents());
+                return $contents;
+            }
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            // you can catch here 400 response errors and 500 response errors
+            // You can either use logs here use Illuminate\Support\Facades\Log;
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+            \Drupal::logger('dataset_upload')->error('Error occurred in get request.', ['error' => $error]);
+        } catch (Exception $e) {
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+        }
+
+
+
+        return [];
+    }
+
+    public function getIngestRootPath(): array
+    {
+        if (empty($this->token)) {
+            $user = $this->config->get('nird_username');
+            $pass = $this->config->get('nird_password');
+            self::getToken(
+                '',
+                $user,
+                $pass,
+                '',
+                '',
+                ''
+            );
+        }
+        //$json = $this->json::encode($dataset);
+
+        //var_dump($json);
+        $endpoint = $this->config->get('nird_api_ingest_root_path_endpoint');
+        try {
+            $response = $this->httpClient->get(
+                $this->config->get('nird_api_ingest_root_path_endpoint'),
+                [
+      'base_uri' => $this->config->get('nird_api_base_uri'),
+      //'json' => $json,
+      'http_erros' => false,
+      'headers' => [
+        'Authorization' => "{$this->token_type} {$this->token}",
+        'Content-Type' => "application/json",
+        'Accept' => 'application/json',
+      ],
+    ]
+            );
+
+            if ($response->getStatusCode() === 200) {
+                $contents = $this->json::decode($response->getBody()->getContents());
+                return $contents;
+            }
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            // you can catch here 400 response errors and 500 response errors
+            // You can either use logs here use Illuminate\Support\Facades\Log;
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+            \Drupal::logger('dataset_upload')->error('Error occurred in get request.', ['error' => $error]);
+        } catch (Exception $e) {
+            $error['error'] = $e->getMessage();
+            $error['request'] = $e->getRequest();
+            return $error;
+        }
+
+
+
+        return [];
+    }
 }

@@ -41,23 +41,38 @@ class DatasetUploadQueue extends QueueWorkerBase
         //Get the minio upload service
         $minio = \Drupal::service('dataset_upload.minio_service');
 
+        //Get the module config
+        $config_factory = \Drupal::configFactory();
+        $config = $config_factory->get('dataset_upload.settings');
+        $base_dest = $config->get('minio_remote_base_path');
         //$nird = \Drupal::service('dataset_upload.nird_api_client');
         //\Drupal::logger('nird')->debug('queue item <pre><code>' . print_r($data, true) . '</code></pre>');
         //$status = $nird->getDatasetStatus($data->dataset_id);
         //\Drupal::logger('nird')->debug('dataset_status:  <pre><code>' . print_r($status, true) . '</code></pre>');
 
         //Upload the dataset(s)
-        $status = $minio->upload($data->path, $data->dataset_id);
+        $status = $minio->upload($data->path, $data->dataset_id, $data->root_path);
         \Drupal::logger('nird')->debug('minio rclone status: ' . $status);
 
 
         //If upload is success we send this item to the mailQueue for further processing
         if ($status) {
-            \Drupal::logger('nird')->notice('Upload success!. add item' . $data->dataset_id.' to emailqueue.');
+            \Drupal::logger('nird')->notice('Upload success!. add item ' . $data->dataset_id.' to emailqueue.');
             $queue = \Drupal::service('queue')->get('nird_email_queue');
             $data->nird_status = 'uploaded';
+            //Call the ingest
+            $nirdApiClient = \Drupal::service('dataset_upload.nird_api_client');
+            $ingestStatus = $nirdApiClient->ingestDataset([
+              'dataset_id' => $data->dataset_id,
+              'paths' => [
+                $data->root_path.'/'.$base_dest.$data->dataset_id,
+              ],
+            ]);
+            \Drupal::logger('nird')->info('paths: '   .$data->root_path.'/'.$base_dest.$data->dataset_id);
+            \Drupal::logger('nird')->info($ingestStatus['details']);
             $queue->createItem($data);
         } else {
+            throw new RequeueException('MinIO failed with status: ' . $status);
             \Drupal::logger('nird')->error('minio rclone failed: <pre><code>' . print_r($minio->getMessage(), true) . '</code></pre>');
         }
     }

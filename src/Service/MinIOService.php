@@ -31,27 +31,47 @@ class MinIOService
      *
      * @param string $source_path
      * @param string $id
+     * @param string $root_path
      *
      * @return bool $status
      */
 
-    public function upload(string $source_path, string $id)
+    public function upload(string $source_path, string $id, string $root_path)
     {
+
+      /**
+        * Get the minIO base destination from the config
+        */
+
+        $config_factory = \Drupal::configFactory();
+        $config = $config_factory->get('dataset_upload.settings');
+        $base_dest = $config->get('minio_remote_base_path');
+        $config_path = $config->get('minio_rclone_config_path');
         $out = null;
         $status = null;
 
-        $cmd = '/usr/bin/rclone --config='.MinIOService::CONFIG_FILE . ' copy '.$source_path . ' minio:'.MinIOService::BASE_DEST.$id;
+        $cmd = '/usr/bin/rclone --config='.$config_path . ' copy '.$source_path . ' minio:'.$base_dest.$id;
+        \Drupal::logger('dataset_upload')->info('rclone cmd: ' .$cmd);
         //Upload the file(s)
         exec($cmd, $out, $status);
         //\Drupal::logger('dataset_upload')->debug('Rclone: <pre><code>' . print_r($out, true) . '</code></pre>');
-        \Drupal::logger('dataset_upload')->debug('Rclone CMD status: '. $status);
+        \Drupal::logger('dataset_upload')->info('Rclone CMD status: '. $status);
 
 
         if ($status !== 0) {
             $this->message = $out;
             return false;
         }
-        return true;
+        /*$statusIngest = $this->nirdApiClient->ingestDataset(['dataset_id' => $id,
+        [
+          'paths' => $root_path .'/'.$base_dest.$id,
+        ],
+      ]
+    ]);
+    \Drupal::logger('dataset_upload')->debug('Ingest status: '. $statusIngest);*/
+        else {
+            return true;
+        }
     }
 
     public function getMessage()

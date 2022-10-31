@@ -97,6 +97,20 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       '#size' => 35,
     ];
 
+        $form['api']['nird_api_ingest_dataset_endpoint'] = [
+  '#type'          => 'textfield',
+  '#title'         => $this->t('NIRD API Ingest dataset endpoint'),
+    '#default_value' => $config->get('nird_api_ingest_dataset_endpoint'),
+  '#size' => 35,
+];
+
+        $form['api']['nird_api_ingest_root_path_endpoint'] = [
+'#type'          => 'textfield',
+'#title'         => $this->t('NIRD API Ingest get root path endpoint'),
+'#default_value' => $config->get('nird_api_ingest_root_path_endpoint'),
+'#size' => 35,
+];
+
         $form['api']['nird_api_subject_endpoint'] = [
       '#type'          => 'textfield',
       '#title'         => $this->t('NIRD API Subject endpoint'),
@@ -231,6 +245,28 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
                       //  '#disabled' => true,
                     ];
         */
+
+        $form['minio-wrapper'] = [
+          '#type' => 'fieldset',
+          '#title' => $this->t('minIO configuration'),
+          //'#tree' => TRUE,
+        ];
+        $form['minio-wrapper']['minio_rclone_config'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('minIO rclone.conf location'),
+          '#description' =>  $this->t('Provide full path including filename for the rclone.conf file.'),
+            '#default_value' => $config->get('minio_rclone_config_path'),
+          '#size' => 35,
+        ];
+        $form['minio-wrapper']['minio_remote_base_path'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('minIO remote base path'),
+                    '#description' =>  $this->t('Enter the minIO relative basepath for upload. DO NOT add leading slash, but DO ADD trailing slash'),
+            '#default_value' => $config->get('minio_remote_base_path'),
+          '#size' => 35,
+        ];
+
+        $form['helptext-wrapper']['helptext-upload'] =
         $form['helptext-wrapper'] = [
           '#type' => 'fieldset',
           '#title' => $this->t('Helptext and instruction'),
@@ -299,6 +335,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_base_uri', $values['nird_api_base_uri'])
       ->set('nird_api_token_endpoint', $values['nird_api_token_endpoint'])
       ->set('nird_api_dataset_endpoint', $values['nird_api_dataset_endpoint'])
+      ->set('nird_api_ingest_dataset_endpoint', $values['nird_api_ingest_dataset_endpoint'])
       ->set('nird_api_subject_endpoint', $values['nird_api_subject_endpoint'])
       ->set('nird_api_domain_endpoint', $values['nird_api_domain_endpoint'])
       ->set('nird_api_field_endpoint', $values['nird_api_field_endpoint'])
@@ -311,6 +348,11 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_dataset_status_endpoint', $values['nird_api_dataset_status_endpoint'])
       ->set('nird_api_landing_page_endpoint', $values['nird_api_landing_page_endpoint'])
       ->set('nird_api_search_org_endpoint', $values['nird_api_search_org_endpoint'])
+      ->set('nird_api_ingest_root_path_endpoint', $values['nird_api_ingest_root_path_endpoint'])
+
+
+      ->set('minio_rclone_config_path', $values['minio_rclone_config'])
+      ->set('minio_remote_base_path', $values['minio_remote_base_path'])
 
       /*
       ->set('data_manager_longname', $values['data_manager']['longname'])
