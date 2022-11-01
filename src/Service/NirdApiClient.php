@@ -88,9 +88,9 @@ class NirdApiClient implements NirdApiClientInterface
      * {@inheritDoc}
      */
     public function getToken(
-        $grant_type = '',
         $username,
         $password,
+        $grant_type = '',
         $scope = '',
         $client_id = '',
         $client_secret = ''
@@ -138,9 +138,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -188,9 +188,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -232,9 +232,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -280,9 +280,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -318,9 +318,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -359,9 +359,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -401,9 +401,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -450,9 +450,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -512,9 +512,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -559,9 +559,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -609,9 +609,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -655,9 +655,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -727,9 +727,10 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
+                '',
                 '',
                 '',
                 ''
@@ -766,12 +767,12 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
                 '',
                 '',
-                ''
+                '',
+                '',
             );
         }
 
@@ -804,9 +805,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -862,9 +863,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
@@ -917,9 +918,9 @@ class NirdApiClient implements NirdApiClientInterface
             $user = $this->config->get('nird_username');
             $pass = $this->config->get('nird_password');
             self::getToken(
-                '',
                 $user,
                 $pass,
+                '',
                 '',
                 '',
                 ''
