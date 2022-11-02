@@ -74,6 +74,11 @@ function dataset_upload_cron()
             // release the item and skip to the next queue.
             $queue->releaseItem($item);
             break;
+          } catch (RequeueException $e) {
+              // If the worker indicates there is a problem with the whole queue,
+              // release the item and skip to the next queue.
+              $queue->releaseItem($item);
+              break;
         } catch (\Exception $e) {
             // In case of any other kind of exception, log it and leave the item
             // in the queue to be processed again later.

@@ -16,10 +16,12 @@ use Drupal\file\Entity\File;
  * @QueueWorker (
  *   id = "nird_email_queue",
  *   title = @Translation("Check dataset status, and send email when dataset is available"),
+ *   delay = { "time" = 3600},
+ *   cron = {"time" = 60}
  * )
  */
  //implements DelayableQueueInterface
-class DatasetEmailQueue extends QueueWorkerBase
+class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInterface
 {
     /**
      * {@inheritdoc}
@@ -49,9 +51,10 @@ class DatasetEmailQueue extends QueueWorkerBase
         //    $status['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
         //}
         //Requeue for 1 hour and check again if we have no DOI
-        if (!$status['doi']) {
+        if (!isset($status['doi'])) {
             \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
-            throw new DelayedRequeueException(3600);
+            throw new DelayedRequeueException();
+            //throw new RequeueException();
 
         //If dataset is published, we send an email.
         } else {
@@ -75,7 +78,8 @@ class DatasetEmailQueue extends QueueWorkerBase
             if ($result['result'] !== true) {
                 \Drupal::logger('nird')->error(t('There was a problem sending your message and it was not sent.'));
                 //If email sending fails..requeue
-                throw new DelayedRequeueException(3600);
+                throw new DelayedRequeueException();
+                //throw new RequeueException();
             } else {
                 \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
 
@@ -93,10 +97,11 @@ class DatasetEmailQueue extends QueueWorkerBase
             }
         }
     }
-    /*
+
         public function delayItem($item, int $delay)
         {
+          //if(isset())
             return true;
         }
-    */
+
 }
