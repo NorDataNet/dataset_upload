@@ -37,7 +37,7 @@ class AggregationChecker
         exec('/usr/local/bin/agg_checker.py '.$datasets.' '.$variable, $out_agg, $status_agg);
         //dpm('/usr/local/bin/agg_checker.py '.$datasets.' '.$variable);
         //ker.py ran with status: " .$status_agg);
-        \Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($out_agg, true) . '</code></pre>');
+        //\Drupal::logger('dataset_upload')->debug('<pre><code>' . print_r($out_agg, true) . '</code></pre>');
 
         $fail_agg = false;
         $msg_agg = array();

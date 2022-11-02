@@ -1822,8 +1822,9 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                 $form_state->set('creator_type', $creator_type);
                 $creator_type_count = array_count_values($creator_type);
                 //\Drupal::logger('dataset_upload')->debug('depositor count <pre><code>' . print_r($depositor_type_count, true) . '</code></pre>');
-                $creator_person_count = (int) $creator_type_count['person'];
-                $creator_org_count = (int) $creator_type_count['institution'];
+                $creator_person_count  = isset($creator_type_count['person']) ? (int) $creator_type_count['person'] : 0;
+
+                $creator_org_count = isset($creator_type_count['institution']) ? (int) $creator_type_count['institution'] : 0;
                 $form_state->set('creator_person_count', $creator_person_count);
                 $form_state->set('creator_org_count', $creator_org_count);
             }
