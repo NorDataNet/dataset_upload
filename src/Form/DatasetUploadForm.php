@@ -3279,11 +3279,16 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             $item = new \stdClass();
             $item->uid = $this->currentUser->id();
             $item->dataset_id = $result['dataset_id'];
-            $item->nird_status = 'registered';
             $item->path =  \Drupal::service('file_system')->realpath($dest_path);
             $item->doi = null;
             $item->title = $dataset['title'];
             $item->root_path = $rootPath;
+            $item->nird_status = 'registered';
+            $item->nird_process = [
+              'uploaded' => 'NO',
+              'published' => 'NO',
+              'email sent' => 'NO'
+            ];
             // Add the file id to queue item if the file is a sigle netCDF
             if ($file->getMimeType() === 'application/x-netcdf') {
                 $item->fid = $file_id;

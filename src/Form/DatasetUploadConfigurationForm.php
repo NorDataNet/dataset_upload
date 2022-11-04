@@ -245,6 +245,18 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
                       //  '#disabled' => true,
                     ];
         */
+        $form['manifest-wrapper'] = [
+          '#type' => 'fieldset',
+          '#title' => $this->t('Ingest dataset manifest config'),
+          //'#tree' => TRUE,
+        ];
+        $form['manifest-wrapper']['manifest_path_config'] = [
+          '#type'          => 'textfield',
+          '#title'         => $this->t('Manifest file path'),
+          '#description' =>  $this->t('Provide relative path for where to ingest manifest files. DO NOT add leading slash, but DO ADD trailing slash.'),
+            '#default_value' => $config->get('manifest_config_path'),
+          '#size' => 35,
+        ];
 
         $form['minio-wrapper'] = [
           '#type' => 'fieldset',
@@ -350,6 +362,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       ->set('nird_api_search_org_endpoint', $values['nird_api_search_org_endpoint'])
       ->set('nird_api_ingest_root_path_endpoint', $values['nird_api_ingest_root_path_endpoint'])
 
+      ->set('manifest_config_path', $values['manifest_path_config'])
 
       ->set('minio_rclone_config_path', $values['minio_rclone_config'])
       ->set('minio_remote_base_path', $values['minio_remote_base_path'])

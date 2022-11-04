@@ -53,6 +53,7 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
         //Requeue for 1 hour and check again if we have no DOI
         if (!isset($status['doi'])) {
             \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
+            $data->nird_process['published'] = 'NO';
             throw new DelayedRequeueException();
             //throw new RequeueException();
 
@@ -60,6 +61,8 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
         } else {
             $user = \Drupal\user\Entity\User::load($data->uid);
             \Drupal::logger('nird')->notice('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
+
+            $data->nird_process['published'] = 'YES';
 
             $mailManager = \Drupal::service('plugin.manager.mail');
             $module = 'dataset_upload';
@@ -77,11 +80,15 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
             $result = $mailManager->mail($module, $key, $to, $langcode, $params, null, $send);
             if ($result['result'] !== true) {
                 \Drupal::logger('nird')->error(t('There was a problem sending your message and it was not sent.'));
+                $data->nird_process['email sent'] = 'FAIL';
+
+
                 //If email sending fails..requeue
                 throw new DelayedRequeueException();
                 //throw new RequeueException();
             } else {
                 \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
+                $data->nird_process['email sent'] = 'SUCCESS';
 
                 //Clean up the files.
                 if (property_exists($data, 'fid')) {

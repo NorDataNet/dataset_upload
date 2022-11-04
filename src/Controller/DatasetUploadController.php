@@ -65,13 +65,13 @@ class DatasetUploadController extends ControllerBase
         $dest_base = 'import/test-magnar/';
 
         $cmd = '/usr/bin/rclone --config='.$config_file . ' copy '.$source . ' minio:'.$dest_base.$dest . ' -vv';
-        dpm($cmd);
+        //dpm($cmd);
         $retval = null;
         $output = [];
         exec($cmd, $output, $retval);
         //$status = shell_exec($cmd);
-        dpm($retval);
-        dpm($output);
+        //dpm($retval);
+        //dpm($output);
         //dpm($string);
 
         \Drupal::logger('rclone')->debug('<pre><code>' . print_r($output, true) . '</code></pre>');
