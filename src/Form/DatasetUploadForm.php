@@ -282,7 +282,7 @@ class DatasetUploadForm extends DatasetValidationForm
         ];
 
         if ($form_state->has('validation_message')) {
-            $form_state->get('validation_message');
+            $validation_message = $form_state->get('validation_message');
 
             foreach ($validation_message as $msg) {
                 $form['container']['validation_message'][] = [
