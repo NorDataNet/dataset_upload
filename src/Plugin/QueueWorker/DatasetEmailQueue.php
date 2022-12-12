@@ -55,12 +55,12 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
             \Drupal::logger('nird')->notice('Dataset ' . $data->dataset_id. ' not published yet. delaying processing...');
             $data->nird_process['published'] = 'NO';
             throw new DelayedRequeueException();
-            //throw new RequeueException();
+        //throw new RequeueException();
 
         //If dataset is published, we send an email.
         } else {
             $user = \Drupal\user\Entity\User::load($data->uid);
-            \Drupal::logger('nird')->notice('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
+            \Drupal::logger('nird')->info('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
 
             $data->nird_process['published'] = 'YES';
 
@@ -72,7 +72,7 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
             $params['title'] = $data->title;
             $params['id'] = $data->dataset_id;
             //$params['doi'] = 'https://doi.org/10.21203/rs.3.rs-361384/v1';
-            //$params['doi'] = $data->doi;
+            $params['doi'] = $status['doi'];
 
             $langcode = $user->getPreferredLangcode();
             $send = true;
@@ -85,9 +85,9 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
 
                 //If email sending fails..requeue
                 throw new DelayedRequeueException();
-                //throw new RequeueException();
+            //throw new RequeueException();
             } else {
-                \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
+                \Drupal::logger('nird')->info(t('The email was sent to @user', ['@user' => $to]));
                 $data->nird_process['email sent'] = 'SUCCESS';
 
                 //Clean up the files.
@@ -105,10 +105,9 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
         }
     }
 
-        public function delayItem($item, int $delay)
-        {
-          //if(isset())
-            return true;
-        }
-
+    public function delayItem($item, int $delay)
+    {
+        //if(isset())
+        return true;
+    }
 }

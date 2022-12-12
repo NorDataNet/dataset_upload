@@ -57,7 +57,7 @@ class DatasetUploadQueue extends QueueWorkerBase
 
         //If upload is success we send this item to the mailQueue for further processing
         if ($status) {
-            \Drupal::logger('nird')->notice('Upload success!. add item ' . $data->dataset_id.' to emailqueue.');
+            \Drupal::logger('nird')->info('Upload success!. add item ' . $data->dataset_id.' to emailqueue.');
             $queue = \Drupal::service('queue')->get('nird_email_queue');
             $data->nird_process['uploaded'] = 'SUCCESS';
 
