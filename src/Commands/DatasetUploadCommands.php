@@ -82,11 +82,11 @@ class DatasetUploadCommands extends DrushCommands
     {
         $queue = $this->queueFactory->get('nird_email_queue');
         $logger = $this->loggerFactory->get('nird');
-        $logger->notice("executing nird_email_queue with number of items: ". $queue->numberOfItems());
+        $logger->info("executing nird_email_queue with number of items: ". $queue->numberOfItems());
         $queue_worker = $this->queueManager->createInstance('nird_email_queue');
 
         while ($item = $queue->claimItem()) {
-            $logger->notice("Processing: ". $item->data->dataset_id);
+            $logger->info("Processing: ". $item->data->dataset_id);
             try {
                 $queue_worker->processItem($item->data);
                 $queue->deleteItem($item);

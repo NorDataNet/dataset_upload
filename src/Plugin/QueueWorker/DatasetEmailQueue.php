@@ -60,7 +60,7 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
         //If dataset is published, we send an email.
         } else {
             $user = \Drupal\user\Entity\User::load($data->uid);
-            \Drupal::logger('nird')->notice('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
+            \Drupal::logger('nird')->info('Got DOI; ' . $status['doi'] . '. Sending email to contributor ' . $user->getEmail());
 
             $data->nird_process['published'] = 'YES';
 
@@ -87,7 +87,7 @@ class DatasetEmailQueue extends QueueWorkerBase //implements DelayableQueueInter
                 throw new DelayedRequeueException();
                 //throw new RequeueException();
             } else {
-                \Drupal::logger('nird')->notice(t('The email was sent to @user', ['@user' => $to]));
+                \Drupal::logger('nird')->info(t('The email was sent to @user', ['@user' => $to]));
                 $data->nird_process['email sent'] = 'SUCCESS';
 
                 //Clean up the files.

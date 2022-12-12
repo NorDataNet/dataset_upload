@@ -1166,56 +1166,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
                   '#required' => true
                 ];
             } else {
-                $form['dataset']['data_manager'][$i]['manager'] = [
-              '#type' => 'fieldgroup',
-              '#title' => $this->t('Data manager person'),
-              //'#open' => true,
-            //'#type' => 'container',
-            //'#title' => $this->t('Data manager'),
-            //'#description' => $this->t('The person or organization that are responsible for fielding questions on the maintenance and use of the data. There can be more than one data manager'),
-            //'#tree' => true,
-            //'#prefix' => '<div id="manager-wrapper">',
-            //'#suffix' => '</div>',
 
-          ];
-
-
-                $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
-        '#type' => 'textfield',
-          '#title' => $this
-            ->t('First name'),
-              '#default_value' => '',
-            '#required' => true
-            //'#default_value' => $user->get('field_first_name'),
-            //'#disabled' => true,
-        ];
-
-                $form['dataset']['data_manager'][$i]['manager']['lastname'] = [
-          '#type' => 'textfield',
-            '#title' => $this
-              ->t('Last name'),
-              '#default_value' =>  '',
-              '#required' => true
-            //  '#default_value' => $user->get('field_last_name'),
-              //'#disabled' => true,
-          ];
-                $form['dataset']['data_manager'][$i]['manager']['email'] = [
-            '#type' => 'email',
-              '#title' => $this
-                ->t('Email'),
-              '#default_value' => '',
-              '#required' => true
-              //'#disabled' => true,
-            ];
-                $form['dataset']['data_manager'][$i]['manager']['federatedid'] = [
-                '#type' => 'hidden',
-                  '#title' => $this
-                    ->t('Federated ID'),
-                    '#default_value' => '',
-                    //'#required' => true
-                    //'#disabled' => true,
-                ];
-                break;
             }
         }
 
@@ -1948,8 +1899,18 @@ confirming your submission. If the metadata are not correct, cancel your submiss
             foreach ($archived_files as $f) {
                 $uri = $output_path .'/' .$f;
                 $filepath = \Drupal::service('file_system')->realpath($uri);
-                $md = $this->attributeExtractor->extractAttributes($filepath, '');
+                $path_info = pathinfo($filepath);
+                //\Drupal::logger('dataset_validation_archiver')->debug('<pre><code>' . print_r($path_info, true) . '</code></pre>');
+                //dpm($path_info);
 
+                if (isset($path_info['extension'])) {
+                    //\Drupal::logger('archiver')->debug($filepath . ' : ' . $ext);
+                    $ext = $path_info['extension'];
+                    if ($ext === 'nc') {
+                      $md = $this->attributeExtractor->extractAttributes($filepath, '');
+                    }
+                  }
+                }
                 //$md = $this->ncToMmd->getMetadata($filepath, $f, $output_path);
           /*      $arr = $md[0];
                 for ($i = 0; $i < count($arr); $i++) {
@@ -1958,7 +1919,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         ];
                 }
             } */
-            }
+
             //dpm($md);
             /**
              * TODO: Create an unique array of the metadata from all files?
@@ -2983,14 +2944,17 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $upload_path = $session->get('upload_path');
         $user_id = $this->currentUser->id();
 
-        $dataset = $form_state->getValues()['dataset'];
+        $dataset = $form_state->getValues(); //['dataset'];
 
         //Do some processing if we created or selected data manager or rights holder institutions
-        if (is_null($dataset)) {
+        if (!isset($dataset['dataset'])) {
             //\Drupal::logger("Warning dataset empty..get from formstate");
             $dataset = $form_state->get('current_dataset');
             //$register =
             //$form_state = $form_state->get('current_state');
+        }
+        else {
+          $dataset = $dataset['dataset'];
         }
 
         //dpm($form_state);
@@ -3511,15 +3475,21 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         //dpm($dataset_type);
         //dpm($selected_checkboxes);
         $services = [];
-        if ($selected_checkboxes['https'] !== 0) {
+        if (isset($selected_checkboxes['https'])) {
+          if($selected_checkboxes['https'] !== 0) {
             $services[] = 'http';
+          }
         }
+        if(isset($selected_checkboxes['opendap'])) {
         if ($selected_checkboxes['opendap'] !== 0) {
             $services[] = 'opendap';
         }
+      }
+      if(isset($selected_checkboxes['wms'])) {
         if ($selected_checkboxes['wms'] !== 0) {
             $services[] = 'wms';
         }
+      }
         //dpm($services);
 
         $form_state->set('yaml_services', $services);
