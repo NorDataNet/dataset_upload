@@ -205,6 +205,19 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
             '#default_value' => $config->get('nird_api_search_org_endpoint'),
           '#size' => 35,
         ];
+
+        $form['debug'] = array(
+          '#type' => 'fieldset',
+          '#title' => $this->t('Enable some debug of the API'),
+          //'#tree' => TRUE,
+          );
+
+        $form['debug']['debug_json'] = [
+          '#type'          => 'checkbox',
+          '#title'         => $this->t('Enable json dataset upload debug'),
+            '#default_value' => $config->get('debug_json'),
+          //'#size' => 35,
+        ];
         /*
                 $form['data_manager'] = [
 
@@ -375,6 +388,7 @@ class DatasetUploadConfigurationForm extends ConfigFormBase
       */
       ->set('helptext_upload', $values['helptext-upload'])
       ->set('helptext_dataset', $values['helptext-dataset'])
+      ->set('debug_json', $values['debug_json'])
       ->save();
         parent::submitForm($form, $form_state);
     }

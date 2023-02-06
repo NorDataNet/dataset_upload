@@ -424,7 +424,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
   '#default_value' => isset($metadata['title']) ? $metadata['title'] : '', //$prefill[' title'],
   '#size' => 120,
   '#required' => true,
-  '#disabled' => isset($metadata['title']),
+  //'#disabled' => isset($metadata['title']),
   ];
 
         /**
@@ -2572,6 +2572,8 @@ confirming your submission. If the metadata are not correct, cancel your submiss
 
     public function registrationConfirmedForm(array &$form, FormStateInterface $form_state)
     {
+      $config = self::config('dataset_upload.settings');
+      $debug_json = $config->get('debug_json');
         $form['registration-message'] = [
     '#type' => 'markup',
     '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
@@ -2579,19 +2581,22 @@ confirming your submission. If the metadata are not correct, cancel your submiss
     '#suffix' => '</div>',
     '#allowed_tags' => ['div', 'span','strong'],
   ];
-        /*  $yaml = $form_state->get('yaml_file');
-          $form['services-yaml'] = [
-          '#type' => 'textarea',
-          '#title' => 'dataset services config yaml',
-          '#value' => Yaml::encode($yaml),
-        ];
-
-          $form['json'] = [
+        /*
+        */
+     
+        if($debug_json) {
+        $form['json'] = [
         '#type' => 'textarea',
         '#title' => 'Dataset registration summary as JSON object',
         '#default_value' => $form_state->get('json'),
-    ];*/
-
+    ];
+    $yaml = $form_state->get('yaml_file');
+    $form['services-yaml'] = [
+    '#type' => 'textarea',
+    '#title' => 'dataset services config yaml',
+    '#value' => Yaml::encode($yaml),
+  ];
+  }
         $form['another'] = [
   '#type' => 'submit',
   '#value' => $this->t('Upload and register another dataset'),
