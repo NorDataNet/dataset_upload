@@ -66,9 +66,9 @@ class DatasetUploadQueue extends QueueWorkerBase
             $nirdApiClient = \Drupal::service('dataset_upload.nird_api_client');
             $ingestStatus = $nirdApiClient->ingestDataset([
               'dataset_id' => $data->dataset_id,
-              'paths' => [
-                $data->root_path.'/'.$base_dest.$data->dataset_id,
-              ],
+              'paths' => [[
+                'file_path' => $data->root_path.'/'.$base_dest.$data->dataset_id,
+              ]],
             ]);
             \Drupal::logger('nird')->info('paths: '   .$data->root_path.'/'.$base_dest.$data->dataset_id);
             if(isset($ingestStatus['details'])) {
