@@ -3,6 +3,10 @@
     "type": "drupal-module",
     "description": "NIRD dataset upload module",
     "license": "GPL-2.0+",
+    "scripts": {
+        "sniff": "phpcs --colors -n --standard=Drupal --extensions=php,module,yml src",
+        "snifferfix": "phpcbf --colors -n --standard=Drupal --extensions=php,module,yml src"
+    },
 "extra": {
     "drush": {
       "services": {

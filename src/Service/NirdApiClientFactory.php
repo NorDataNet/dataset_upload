@@ -52,9 +52,9 @@ class NirdApiClientFactory {
    */
   public function create() {
     $config = $this->configFactory->get('dataset_upload.settings');
-    $http_client =$this->httpClientFactory->fromOptions();
-    //$this->httpClientFactory->setBaseUrl($config->get('nird_api_base_uri'));
-    //$http_client = $this->httpClientFactory;
+    $http_client = $this->httpClientFactory->fromOptions();
+    // $this->httpClientFactory->setBaseUrl($config->get('nird_api_base_uri'));
+    // $http_client = $this->httpClientFactory;
     return new NirdApiClient($config, $http_client, $this->json);
   }
 

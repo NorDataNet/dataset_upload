@@ -4,7 +4,6 @@ namespace Drupal\dataset_upload\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Render\Markup;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -16,15 +15,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class DatasetPersonForm extends FormBase {
 
-
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-//    return new static(
-//      $container->get('dataset_upload.client'),
- //     $container->get('dataset_upload.breed_factory')
-  //  );
+    // Return new static(
+    // $container->get('dataset_upload.client'),
+    // $container->get('dataset_upload.breed_factory')
+    // );.
   }
 
   /**
@@ -39,39 +37,38 @@ class DatasetPersonForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, string $breed_id = NULL, int $limit = 3) {
     $form['firstname'] = [
-  '#type' => 'textfield',
-    '#title' => $this
-      ->t('First name'),
-      //'#default_value' => $this->currentUser->getAccountName(),
-  ];
+      '#type' => 'textfield',
+      '#title' => $this
+        ->t('First name'),
+      // '#default_value' => $this->currentUser->getAccountName(),
+    ];
 
     $form['lastname'] = [
-    '#type' => 'textfield',
+      '#type' => 'textfield',
       '#title' => $this
         ->t('Last name'),
-        //'#default_value' => $this->currentUser->getDisplayName(),
+        // '#default_value' => $this->currentUser->getDisplayName(),
     ];
     $form['email'] = [
       '#type' => 'email',
-        '#title' => $this
-          ->t('Email'),
-        //'#default_value' => $this->currentUser->getEmail(),
-      ];
+      '#title' => $this
+        ->t('Email'),
+        // '#default_value' => $this->currentUser->getEmail(),
+    ];
     $form['federatedid'] = [
-          '#type' => 'number',
-            '#title' => $this
-              ->t('Federated ID'),
-        //      '#default_value' => $this->currentUser->id(),
-          ];
+      '#type' => 'number',
+      '#title' => $this
+        ->t('Federated ID'),
+        // '#default_value' => $this->currentUser->id(),
+    ];
 
-
-return $form;
+    return $form;
   }
+
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-
 
   }
 
