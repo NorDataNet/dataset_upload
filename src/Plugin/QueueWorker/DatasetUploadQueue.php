@@ -70,7 +70,8 @@ class DatasetUploadQueue extends QueueWorkerBase {
     else {
       $data->nird_process['uploaded'] = 'FAILED';
       \Drupal::logger('nird')->error('minio rclone failed: <pre><code>' . print_r($minio->getMessage(), TRUE) . '</code></pre>');
-      throw new DelayedRequeueException('MinIO failed with status: ' . $status);
+      throw new DelayedRequeueException(240);
+      
     }
   }
 
