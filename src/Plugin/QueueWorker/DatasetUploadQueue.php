@@ -64,7 +64,7 @@ class DatasetUploadQueue extends QueueWorkerBase {
         ],
       ]);
       \Drupal::logger('nird')->info('paths: ' . $data->root_path . '/' . $base_dest . $data->dataset_id);
-      \Drupal::logger('nird')->info($ingestStatus['details']);
+      \Drupal::logger('nird')->info('<pre><code>' . print_r($ingestStatus, TRUE) . '</code></pre>');
       $queue->createItem($data);
     }
     else {
