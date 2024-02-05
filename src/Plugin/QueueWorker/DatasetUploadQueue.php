@@ -12,6 +12,7 @@ use Drupal\Core\Queue\DelayedRequeueException;
  * @QueueWorker (
  *   id = "nird_upload_queue",
  *   title = @Translation("Upload registered datasets to project area"),
+ *   delay = { "time" = 3600 }
  * )
  */
 class DatasetUploadQueue extends QueueWorkerBase {
@@ -59,9 +60,9 @@ class DatasetUploadQueue extends QueueWorkerBase {
       $nirdApiClient = \Drupal::service('dataset_upload.nird_api_client');
       $ingestStatus = $nirdApiClient->ingestDataset([
         'dataset_id' => $data->dataset_id,
-        'paths' => [
-          $data->root_path . '/' . $base_dest . $data->dataset_id,
-        ],
+        'paths' => [[
+         'file_path' =>  $data->root_path . '/' . $base_dest . $data->dataset_id,
+	]],
       ]);
       \Drupal::logger('nird')->info('paths: ' . $data->root_path . '/' . $base_dest . $data->dataset_id);
       \Drupal::logger('nird')->info('<pre><code>' . print_r($ingestStatus, TRUE) . '</code></pre>');
@@ -74,5 +75,13 @@ class DatasetUploadQueue extends QueueWorkerBase {
       
     }
   }
+ /*
+  * {@inheritdoc}
+  */
+  public function delayItem($item, int $delay) {
+    // if(isset())
+    return TRUE;
+  }
+
 
 }

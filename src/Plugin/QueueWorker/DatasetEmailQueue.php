@@ -6,6 +6,7 @@ use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\file\Entity\File;
 use Drupal\user\Entity\User;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Plugin implementation of the nird_queue queueworker.
@@ -17,10 +18,8 @@ use Drupal\user\Entity\User;
  *   cron = {"time" = 60}
  * )
  */
-/**
- * Implements DelayableQueueInterface.
- */
 class DatasetEmailQueue extends QueueWorkerBase {
+  use StringTranslationTrait;
 
   /**
    * {@inheritdoc}

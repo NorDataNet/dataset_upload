@@ -807,7 +807,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         // for($i=0; $i < $managers; $i++ )
         $form['dataset']['data_manager'][$i]['manager'] = [
           '#type' => 'fieldgroup',
-          '#title' => $this->t('Data manager person'), s
+          '#title' => $this->t('Data manager person'), 
         ];
 
         $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
