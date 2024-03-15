@@ -2,9 +2,9 @@
 
 namespace Drupal\dataset_upload\Plugin\QueueWorker;
 
+use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\Core\Queue\RequeueException;
-use Drupal\Core\Queue\DelayedRequeueException;
 
 /**
  * Plugin implementation of the nird_queue queueworker.
@@ -61,8 +61,9 @@ class DatasetUploadQueue extends QueueWorkerBase {
       $ingestStatus = $nirdApiClient->ingestDataset([
         'dataset_id' => $data->dataset_id,
         'paths' => [[
-         'file_path' =>  $data->root_path . '/' . $base_dest . $data->dataset_id,
-	]],
+          'file_path' => $data->root_path . '/' . $base_dest . $data->dataset_id,
+        ]
+],
       ]);
       \Drupal::logger('nird')->info('paths: ' . $data->root_path . '/' . $base_dest . $data->dataset_id);
       \Drupal::logger('nird')->info('<pre><code>' . print_r($ingestStatus, TRUE) . '</code></pre>');
@@ -72,16 +73,16 @@ class DatasetUploadQueue extends QueueWorkerBase {
       $data->nird_process['uploaded'] = 'FAILED';
       \Drupal::logger('nird')->error('minio rclone failed: <pre><code>' . print_r($minio->getMessage(), TRUE) . '</code></pre>');
       throw new DelayedRequeueException(240);
-      
+
     }
   }
- /*
-  * {@inheritdoc}
-  */
+
+  /**
+   * {@inheritdoc}
+   */
   public function delayItem($item, int $delay) {
     // if(isset())
     return TRUE;
   }
-
 
 }

@@ -4,9 +4,9 @@ namespace Drupal\dataset_upload\Plugin\QueueWorker;
 
 use Drupal\Core\Queue\DelayedRequeueException;
 use Drupal\Core\Queue\QueueWorkerBase;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\file\Entity\File;
 use Drupal\user\Entity\User;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Plugin implementation of the nird_queue queueworker.

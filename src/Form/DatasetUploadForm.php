@@ -232,9 +232,9 @@ class DatasetUploadForm extends DatasetValidationForm {
 
     // Empty the tests (ie. invoke manual)
     // [.
-    $form['container']['creation']['test'] = [];
+    $form['container']['creation']['test'] = NULL;
     // Remove version of cf to test.
-    $form['container']['creation']['cfversion'] = [];
+    $form['container']['creation']['cfversion'] = NULL;
 
     $form['container']['message'] = [
       '#prefix' => '<div class="w3-card">',
@@ -246,14 +246,14 @@ class DatasetUploadForm extends DatasetValidationForm {
     if ($form_state->has('validation_message')) {
       $validation_message = $form_state->get('validation_message');
 
-      foreach ($validation_message as $msg) {
-        $form['container']['validation_message'][] = [
-          '#type' => 'markup',
-          '#prefix' => '<p>',
-          '#suffix' => '</p>',
-          '#markup' => $msg,
-        ];
-      }
+      // foreach ($validation_message as $msg) {
+      //   $form['container']['validation_message'][] = [
+      //     '#type' => 'markup',
+      //     '#prefix' => '<p>',
+      //     '#suffix' => '</p>',
+      //     '#markup' => $msg,
+      //   ];
+      // }
     }
 
     /*
@@ -263,7 +263,8 @@ class DatasetUploadForm extends DatasetValidationForm {
     if (!isset($user->field_first_name) || !isset($user->field_last_name)) {
       $form_state->setRedirect('entity.user.edit_form');
     }
-
+    // dpm($form, __FUNCTION__);
+    // dpm($form_state, __FUNCTION__);.
     return $form;
   }
 
@@ -807,7 +808,7 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         // for($i=0; $i < $managers; $i++ )
         $form['dataset']['data_manager'][$i]['manager'] = [
           '#type' => 'fieldgroup',
-          '#title' => $this->t('Data manager person'), 
+          '#title' => $this->t('Data manager person'),
         ];
 
         $form['dataset']['data_manager'][$i]['manager']['firstname'] = [
@@ -2208,39 +2209,36 @@ confirming your submission. If the metadata are not correct, cancel your submiss
     }
   }
 
-    /**
-     * final form to show when registration is finished
-     */
+  /**
+   * Final form to show when registration is finished.
+   */
+  public function registrationConfirmedForm(array &$form, FormStateInterface $form_state) {
+    $form['registration-message'] = [
+      '#type' => 'markup',
+      '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
+      '#markup' => '<span>Your dataset was successfully registerd with id <strong>' . $form_state->get('dataset_id') . '</strong>. You will get an email when the dataset are published and uploaded to the archive.</span>',
+      '#suffix' => '</div>',
+      '#allowed_tags' => ['div', 'span', 'strong'],
+    ];
+    /*  $yaml = $form_state->get('yaml_file');
+    $form['services-yaml'] = [
+    '#type' => 'textarea',
+    '#title' => 'dataset services config yaml',
+    '#value' => Yaml::encode($yaml),
+    ];
 
-    public function registrationConfirmedForm(array &$form, FormStateInterface $form_state)
-    {
-        $form['registration-message'] = [
-    '#type' => 'markup',
-    '#prefix' => '<div class="w3-panel w3-leftbar w3-container w3-border-green w3-pale-green w3-padding-16" id="nird-message">',
-    '#markup' => '<span>Your dataset was successfully registerd with id <strong>'.$form_state->get('dataset_id').'</strong>. You will get an email when the dataset are published and uploaded to the archive.</span>',
-    '#suffix' => '</div>',
-    '#allowed_tags' => ['div', 'span','strong'],
-  ];
-        /*  $yaml = $form_state->get('yaml_file');
-          $form['services-yaml'] = [
-          '#type' => 'textarea',
-          '#title' => 'dataset services config yaml',
-          '#value' => Yaml::encode($yaml),
-        ];
-
-          $form['json'] = [
-        '#type' => 'textarea',
-        '#title' => 'Dataset registration summary as JSON object',
-        '#default_value' => $form_state->get('json'),
+    $form['json'] = [
+    '#type' => 'textarea',
+    '#title' => 'Dataset registration summary as JSON object',
+    '#default_value' => $form_state->get('json'),
     ];*/
 
-        $form['another'] = [
-  '#type' => 'submit',
-  '#value' => $this->t('Upload and register another dataset'),
-  '#submit' => ['::another'],
-  '#limit_validation_errors' => [],
-];
-
+    $form['another'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Upload and register another dataset'),
+      '#submit' => ['::another'],
+      '#limit_validation_errors' => [],
+    ];
 
     return $form;
   }
@@ -2942,8 +2940,10 @@ confirming your submission. If the metadata are not correct, cancel your submiss
         $file->delete();
       }
     }
+    if ($form_state->has('upload_location') && $form_state->get('upload_location') !== null) {
     // $filesystem->deleteRecursive($upload_path . $user_id . '/' . $session_id);
-    $filesystem->deleteRecursive($form_state->get('upload_location'));
+      $filesystem->deleteRecursive($form_state->get('upload_location'));
+    }
     /*
     $is_empty = function (string $folder): bool {
     if (!file_exists($folder)) {
